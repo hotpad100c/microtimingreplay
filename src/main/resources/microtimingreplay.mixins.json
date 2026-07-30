@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "ml.mypals.microtimingreplay.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"LevelMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
