@@ -3,9 +3,9 @@
 	"id": "microtimingreplay",
 	"version": "${version}",
 	"name": "MicroTimingReplay",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Record micro events in minecraft",
 	"authors": [
-		"Me!"
+		"Ryan100C"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",

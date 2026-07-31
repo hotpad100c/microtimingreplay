@@ -1,0 +1,130 @@
+package ml.mypals.microtimingreplay.event;
+
+import ml.mypals.microtimingreplay.util.MTRComponent;
+
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.level.block.piston.PistonBaseBlock;
+
+
+import ml.mypals.microtimingreplay.marker.MTRMarker;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+
+public class AddBlockEventEvent extends BlockPosEvent {
+
+    public static final String TYPE = "addBlockEvent";
+
+    private final int blockStateId;
+    private final int b0, b1;
+
+    public AddBlockEventEvent(long tick, int x, int y, int z, int blockStateId, int b0, int b1, String dimension) {
+        super(tick, TYPE, new BlockPos(x, y, z), dimension);
+        this.blockStateId = blockStateId;
+        this.b0 = b0;
+        this.b1 = b1;
+    }
+
+    public int getBlockStateId() { return blockStateId; }
+    public int getB0() { return b0; }
+    public int getB1() { return b1; }
+
+    @Override
+    public ChatFormatting getColor() {
+        return ChatFormatting.YELLOW;
+    }
+
+    @Override
+    public MutableComponent fillHoverText() {
+        BlockState state = Block.stateById(blockStateId);
+        Block block = state.getBlock();
+        String blockKey = BuiltInRegistries.BLOCK.getKey(block).toString();
+
+        MutableComponent text = MTRComponent.translatable(
+                "mtr.tooltip.block_event_title",
+                "Execute Block Event @ [%d, %d, %d]",
+                getX(), getY(), getZ()
+        ).append(Component.literal("\n")).withStyle(ChatFormatting.YELLOW);
+
+        if (getDimension() != null && !getDimension().isEmpty()) {
+            text.append(MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", getDimension()).withStyle(ChatFormatting.GOLD))
+                .append(Component.literal("\n"));
+        }
+
+        text.append(MTRComponent.translatable("mtr.tooltip.target", "Target: %s", blockKey).withStyle(ChatFormatting.AQUA))
+        .append(Component.literal("\n"));
+
+        if (block instanceof PistonBaseBlock) {
+            String eventTypeName = switch (b0) {
+                case 0 -> "EXTEND (0)";
+                case 1 -> "RETRACT (1)";
+                case 2 -> "RETRACT_DROP (2)";
+                default -> "UNKNOWN (" + b0 + ")";
+            };
+            Direction dir = Direction.from3DDataValue(b1);
+
+            text.append(MTRComponent.translatable("mtr.tooltip.piston_action", "Piston Action: %s", eventTypeName).withStyle(ChatFormatting.GREEN))
+                .append(Component.literal("\n"))
+                .append(MTRComponent.translatable("mtr.tooltip.direction", "Direction: %s", dir.getName().toUpperCase() + " (" + b1 + ")").withStyle(ChatFormatting.GOLD));
+        } else {
+            text.append(MTRComponent.translatable("mtr.tooltip.event_id", "Event ID (b0): %d", b0).withStyle(ChatFormatting.WHITE))
+                .append(Component.literal("\n"))
+                .append(MTRComponent.translatable("mtr.tooltip.event_param", "Event Param (b1): %d", b1).withStyle(ChatFormatting.WHITE));
+        }
+
+        return text;
+    }
+
+    public static AddBlockEventEvent readNBT(CompoundTag tag) {
+        int stateId;
+        if (tag.contains("blockName")) {
+            Block block = BuiltInRegistries.BLOCK.getOptional(Identifier.tryParse(tag.getString("blockName").orElse("minecraft:air"))).orElse(Blocks.AIR);
+            stateId = Block.getId(block.defaultBlockState());
+        } else {
+            stateId = tag.getInt("blockStateId").orElse(0);
+        }
+
+        AddBlockEventEvent event = new AddBlockEventEvent(
+            tag.getLong("tick").orElse(0L),
+            tag.getInt("x").orElse(0), tag.getInt("y").orElse(0), tag.getInt("z").orElse(0),
+            stateId,
+            tag.getInt("b0").orElse(0), tag.getInt("b1").orElse(0),
+            tag.getString("dimension").orElse("")
+        );
+        MTREvent.readChildrenNBT(event, tag);
+        return event;
+    }
+
+    @Override
+    public CompoundTag writeNBT() {
+        CompoundTag tag = super.writeNBT();
+        tag.putInt("blockStateId", blockStateId);
+        tag.putInt("b0", b0);
+        tag.putInt("b1", b1);
+        return tag;
+    }
+
+    @Override
+    public void display(ServerLevel level) {
+        BlockPos pos = getPos();
+        MTRMarker.spawnBlockDisplay(level, pos, Blocks.YELLOW_STAINED_GLASS.defaultBlockState(), 1.005F, ChatFormatting.YELLOW);
+        
+        BlockState state = Block.stateById(blockStateId);
+        String translationKey = state.getBlock().getDescriptionId();
+        
+        Component text = Component.translatable(translationKey).withStyle(ChatFormatting.YELLOW)
+                .append(Component.literal("\n"))
+                .append(Component.literal( " Dir: " + b0 ))
+                .append(Component.literal(" | ").withStyle(ChatFormatting.WHITE))
+                .append(Component.literal( " Dat: " + b1));
+        MTRMarker.spawnTextDisplay(level, pos.getX() + 0.5, pos.getY() + 1.2, pos.getZ() + 0.5, text, 0.7f);
+    }
+}

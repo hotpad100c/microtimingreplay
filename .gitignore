@@ -38,3 +38,11 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
+/net/
+/display.txt
+/fix_fqns.py
+/methods.txt
+/Test.java
+.gitignore
+
+/plan/

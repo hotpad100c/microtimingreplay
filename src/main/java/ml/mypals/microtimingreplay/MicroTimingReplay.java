@@ -1,19 +1,22 @@
 package ml.mypals.microtimingreplay;
 
+import ml.mypals.microtimingreplay.command.MTRCommand;
+import ml.mypals.microtimingreplay.event.MTREvents;
+import ml.mypals.microtimingreplay.event.SelectionEventHandler;
+import ml.mypals.microtimingreplay.profile.ProfileManager;
+import ml.mypals.microtimingreplay.replay.WorldBackupManager;
 import net.fabricmc.api.ModInitializer;
-
-import net.minecraft.resources.Identifier;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
-import ml.mypals.microtimingreplay.command.MTRCommand;
-import ml.mypals.microtimingreplay.profile.ProfileManager;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class MicroTimingReplay implements ModInitializer {
-	public static final String MOD_ID = "microtimingreplay";
+	@SuppressWarnings("GrazieInspectionRunner")
+    public static final String MOD_ID = "microtimingreplay";
 
 	// This logger is used to write text to the console and the log file.
 	// It is considered best practice to use your mod id as the logger's name.
@@ -28,17 +31,17 @@ public class MicroTimingReplay implements ModInitializer {
 		// However, some things (like resources) may still be uninitialized.
 		// Proceed with mild caution.
 
-		LOGGER.info("Initializing MicroTimingReplay (MTR)...");
 		
 		ProfileManager.init();
+		WorldBackupManager.init();
+		MTREvents.init();
+		MTRGameRules.init();
 
 		CommandRegistrationCallback.EVENT.register(MTRCommand::register);
-
-		ServerLifecycleEvents.SERVER_STARTED.register(s -> {
-			MicroTimingReplay.server = s;
-		});
-
-		net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents.END_SERVER_TICK.register(MTRState::checkAutoStop);
+		ServerLifecycleEvents.SERVER_STARTED.register(s -> MicroTimingReplay.server = s);
+		ServerLifecycleEvents.SERVER_STOPPING.register(MTRState::stoppingServer);
+		ServerTickEvents.END_SERVER_TICK.register(MTRState::checkAutoStop);
+		SelectionEventHandler.register();
 	}
 
 	public static Identifier id(String path) {

@@ -2,43 +2,85 @@ package ml.mypals.microtimingreplay.mixin;
 
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
+import ml.mypals.microtimingreplay.event.MovingPistonEvent;
 import ml.mypals.microtimingreplay.event.SetBlockEvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
+import ml.mypals.microtimingreplay.replay.EntityReplayManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.piston.PistonMovingBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.TagValueOutput;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Level.class)
-public abstract class LevelMixin {
+public abstract class LevelMixin implements ScheduledTickAccess {
 
     @Shadow
     public abstract BlockState getBlockState(BlockPos pos);
 
+    @Shadow
+    @Final
+    private boolean isClientSide;
+
+    @Shadow
+    public abstract ResourceKey<Level> dimension();
+
     @Inject(method = "setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;II)Z", at = @At("HEAD"))
-    private void mtr$onSetBlock(BlockPos pos, BlockState state, int flags, int maxUpdateDepth, CallbackInfoReturnable<Boolean> cir) {
-        if (MTRState.getCurrentState() == MTRState.State.RECORDING) {
+    private void mtr$onSetBlock(BlockPos pos, BlockState blockState, int updateFlags, int updateLimit, CallbackInfoReturnable<Boolean> cir) {
+        if (MTRState.isRecording((Level) (Object) this)) {
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
-                if (!activeProfile.isInArea(pos)) return;
+                if (activeProfile.outsideArea(pos, this.dimension().identifier().toString())) return;
                 BlockState oldState = this.getBlockState(pos);
                 int oldStateId = Block.getId(oldState);
-                int newStateId = Block.getId(state);
-                long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick(); 
-                
+                int newStateId = Block.getId(blockState);
+                long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
+
                 SetBlockEvent event = new SetBlockEvent(
-                    currentTick,
+                    currentTick, updateFlags, updateLimit,
                     pos.getX(), pos.getY(), pos.getZ(),
-                    oldStateId, newStateId
+                    oldStateId, newStateId, this.dimension().identifier().toString()
                 );
-                
-                activeProfile.addEvent(currentTick, event);
+
+                MTRState.recordStep(event);
             }
         }
     }
+
+    @Inject(method = "setBlockEntity", at = @At("HEAD"))
+    private void mtr$onSetBlockEntity(BlockEntity blockEntity, CallbackInfo ci) {
+        if (isClientSide) return;
+        if (!(blockEntity instanceof PistonMovingBlockEntity piston)) return;
+        if (!MTRState.isRecording((Level) (Object) this)) return;
+
+        long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
+        MTRState.recordStep(new MovingPistonEvent(
+                currentTick,
+                piston.getBlockPos(),
+                Block.getId(piston.getMovedState()),
+                piston.getDirection(),
+                piston.isExtending(),
+                piston.isSourcePiston(),
+                false, // spawn
+                this.dimension().identifier().toString()
+        ));
+    }
+
 }

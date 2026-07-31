@@ -4,7 +4,7 @@ import ml.mypals.microtimingreplay.event.MTREvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,17 +12,27 @@ import java.util.List;
 public class MTRProfile {
     private String name;
     private long createdAt;
-    // Ticks recorded so far
     private int ticksRecorded;
-    private List<TickFrame> frames;
+    private final List<TickFrame> frames;
 
-    // Multi-Area Selection
     public static class Area {
         public String name;
         public int x1, y1, z1;
         public int x2, y2, z2;
+        public final String dimension;
 
-        public Area(String name, int ax, int ay, int az, int bx, int by, int bz) {
+        public static String normalizeDimension(String dim) {
+            if (dim == null || dim.isEmpty()) return "minecraft:overworld";
+            if (dim.startsWith("ResourceKey[")) {
+                int slash = dim.indexOf("/");
+                if (slash != -1 && dim.endsWith("]")) {
+                    return dim.substring(slash + 1, dim.length() - 1).trim();
+                }
+            }
+            return dim;
+        }
+
+        public Area(String name, int ax, int ay, int az, int bx, int by, int bz, String dimension) {
             this.name = name;
             this.x1 = Math.min(ax, bx);
             this.y1 = Math.min(ay, by);
@@ -30,6 +40,7 @@ public class MTRProfile {
             this.x2 = Math.max(ax, bx);
             this.y2 = Math.max(ay, by);
             this.z2 = Math.max(az, bz);
+            this.dimension = normalizeDimension(dimension);
         }
 
         public CompoundTag writeNBT() {
@@ -41,6 +52,7 @@ public class MTRProfile {
             tag.putInt("x2", x2);
             tag.putInt("y2", y2);
             tag.putInt("z2", z2);
+            tag.putString("dimension", dimension);
             return tag;
         }
 
@@ -48,12 +60,13 @@ public class MTRProfile {
             return new Area(
                 tag.getString("name").orElse(""),
                 tag.getInt("x1").orElse(0), tag.getInt("y1").orElse(0), tag.getInt("z1").orElse(0),
-                tag.getInt("x2").orElse(0), tag.getInt("y2").orElse(0), tag.getInt("z2").orElse(0)
+                tag.getInt("x2").orElse(0), tag.getInt("y2").orElse(0), tag.getInt("z2").orElse(0),
+                tag.getString("dimension").orElse("minecraft:overworld")
             );
         }
     }
 
-    private List<Area> areas = new ArrayList<>();
+    private final List<Area> areas = new ArrayList<>();
 
     public MTRProfile(String name) {
         this.name = name;
@@ -90,11 +103,20 @@ public class MTRProfile {
         return frames;
     }
 
+    public void removeEvent(long tick, MTREvent event) {
+        for (TickFrame frame : frames) {
+            if (frame.getTick() == tick) {
+                frame.getEvents().remove(event);
+                return;
+            }
+        }
+    }
+
     public void addEvent(long tick, MTREvent event) {
-        if (frames.isEmpty() || frames.get(frames.size() - 1).getTick() != tick) {
+        if (frames.isEmpty() || frames.getLast().getTick() != tick) {
             frames.add(new TickFrame(tick));
         }
-        frames.get(frames.size() - 1).addEvent(event);
+        frames.getLast().addEvent(event);
     }
 
     public List<Area> getAreas() {
@@ -108,7 +130,7 @@ public class MTRProfile {
         return null;
     }
 
-    public String addArea(String name, BlockPos p1, BlockPos p2) {
+    public String addArea(String name, BlockPos p1, BlockPos p2, String dimension) {
         if (name == null || name.isEmpty()) {
             int maxId = 0;
             for (Area area : areas) {
@@ -122,7 +144,7 @@ public class MTRProfile {
         // If it already exists, don't overwrite blindly
         if (getArea(name) != null) return null;
 
-        areas.add(new Area(name, p1.getX(), p1.getY(), p1.getZ(), p2.getX(), p2.getY(), p2.getZ()));
+        areas.add(new Area(name, p1.getX(), p1.getY(), p1.getZ(), p2.getX(), p2.getY(), p2.getZ(), dimension));
         return name;
     }
 
@@ -150,17 +172,44 @@ public class MTRProfile {
         return areas.removeIf(a -> a.name.equals(name));
     }
 
-    public boolean isInArea(BlockPos pos) {
+    public static boolean matchDimension(String d1, String d2) {
+        if (d1 == null || d1.isEmpty() || d2 == null || d2.isEmpty()) return true;
+        return Area.normalizeDimension(d1).equals(Area.normalizeDimension(d2));
+    }
+
+    public boolean outsideArea(BlockPos pos, String dimension) {
         if (areas.isEmpty()) return false;
         int x = pos.getX();
         int y = pos.getY();
         int z = pos.getZ();
         for (Area area : areas) {
-            if (x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2 && z >= area.z1 && z <= area.z2) {
-                return true;
+            if (matchDimension(area.dimension, dimension) && x >= area.x1 && x <= area.x2 && y >= area.y1 && y <= area.y2 && z >= area.z1 && z <= area.z2) {
+                return false;
             }
         }
-        return false;
+        return true;
+    }
+
+    public boolean outsideAreaVec3(Vec3 pos, String dimension) {
+        if (pos == null) return true;
+        if (areas.isEmpty()) return false;
+        double x = pos.x();
+        double y = pos.y();
+        double z = pos.z();
+        for (Area area : areas) {
+            if (matchDimension(area.dimension, dimension) && x >= area.x1 && x <= (area.x2 + 1.0) && y >= area.y1 && y <= (area.y2 + 1.0) && z >= area.z1 && z <= (area.z2 + 1.0)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean outsideDimensionOrArea(String dimension) {
+        if (areas.isEmpty()) return false;
+        for (Area area : areas) {
+            if (matchDimension(area.dimension, dimension)) return false;
+        }
+        return true;
     }
 
     public CompoundTag writeNBT() {

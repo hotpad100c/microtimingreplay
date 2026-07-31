@@ -71,3 +71,4 @@ publishing {
 		// retrieving dependencies.
 	}
 }
+tasks.register('printMethods', JavaExec) { classpath = sourceSets.main.runtimeClasspath; mainClass = 'TestReflection' }

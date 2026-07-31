@@ -1,14 +1,30 @@
 {
-	"required": true,
-	"package": "ml.mypals.microtimingreplay.mixin",
-	"compatibilityLevel": "JAVA_25",
-	"mixins": [
-		"LevelMixin"
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
-	}
+  "required": true,
+  "package": "ml.mypals.microtimingreplay.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "CollectingNeighborUpdaterMixin",
+    "EntityRecordingMixin",
+    "GameEventDispatcherMixin",
+    "LevelMixin",
+    "LevelTicksMixin",
+    "MovingPistonTickMixin",
+    "NeighborUpdaterMixin",
+    "ServerLevelPhasesMixin",
+    "ServerLevelQueuesMixin",
+    "ServerPhasesMixin",
+    "VibrationSystemTickerMixin",
+    "client.ClientEntityMixin",
+    "client.DisplayMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  },
+  "client": [
+    "client.ClientPacketListenerMixin",
+    "client.EntityRenderDispatcherMixin"
+  ]
 }
