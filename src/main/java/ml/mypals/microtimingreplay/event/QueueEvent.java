@@ -39,7 +39,7 @@ public class QueueEvent extends BlockPosEvent {
         MutableComponent comp = MTRComponent.translatable("mtr.scoreboard.event.queue." + keyName, fallback);
         appendPosText(comp);
         if (getChildren().isEmpty()) {
-            return comp.append(Component.literal(" ❌"));
+            return comp.append(Component.literal("∅"));
         }
         return comp;
     }

@@ -16,6 +16,7 @@
 ## 目录
 
 - [核心概念](#核心概念)
+- [事件节点一览](#事件节点一览)
 - [快速上手](#快速上手)
 - [指令总览](#指令总览)
 - [Profile 与区域管理](#profile-与区域管理)
@@ -50,6 +51,86 @@
 
 - **录制需要冻结。** `/mtr record` 依靠 `stepGameIfPaused` 精确推进指定的刻数。未冻结时世界照常流逝，你录到的是自然运行的时间而非受控步进，指令会给出提示。
 - **回放不需要冻结。** 回放的每一步是直接把记录的状态写回世界的，不依赖世界刻推进，冻不冻结都能正确步进。冻结只是为了让周围环境别在你分析的时候继续变化——推荐但非必需。
+
+---
+
+## 事件节点一览
+
+时间轴上的每一行都是一个节点。这里按事件树的层级列出全部类型，以及它们对应 Minecraft 源码里的什么位置。
+
+### 阶段（Phase）— 最外层
+
+一个游戏刻里的大块执行阶段，按 vanilla 的实际执行顺序排列。颜色统一为**浅紫**。
+
+| 时间轴显示 | 内部名 | 含义 | 对应 vanilla |
+|---|---|---|---|
+| 维度运算阶段 | `LevelTickPhase` | 一个维度的完整 tick，最外层容器 | `MinecraftServer.tickChildren` → `ServerLevel.tick()` |
+| 区块运算 | `ChunkTickPhase` | 区块加载/卸载与区块随机事件的驱动 | `ServerChunkCache.tick(...)` |
+| 冰与雪 | `IceAndSnowPhase` | 结冰、积雪、降水判定 | `ServerLevel.tickPrecipitation(...)` |
+| 随机刻 | `RandomTickPhase` | 随机刻（作物生长、树叶衰减等） | `BlockState.randomTick(...)` |
+| 计划刻阶段 | `ScheduledTickPhase` | 计划刻队列的执行 | `ServerLevel.tick` 里的 `LevelTicks.tick(...)` |
+| 方块事件阶段 | `BlockEventPhase` | 方块事件队列的执行| `ServerLevel.runBlockEvents()` |
+| 实体运算阶段 | `EntityTickPhase` | 遍历所有实体做 tick | `EntityTickList.forEach(...)` |
+| 方块实体阶段 | `BlockEntityPhase` | 遍历所有方块实体做 tick | `Level.tickBlockEntities()` |
+| 龙战 | `DragonFightPhase` | 末影龙战斗逻辑（仅末地） | `EnderDragonFight.tick()` |
+| 异步事件阶段 | `AsyncTaskPhase` | 服务端处理异步任务与网络包 | `MinecraftServer.waitUntilNextTick()` |
+
+> 阶段本身没有坐标，因此**不会在世界里生成标记方块**。
+
+### 队列层（Queue）— 单个待办项
+
+阶段内部的一个具体待办项。`forward/backward queue` 就在这一层停。颜色**黄**（有子事件）或**红**（空，说明什么都没触发）。
+
+| 时间轴显示 | 内部名 | 含义 | 对应 vanilla |
+|---|---|---|---|
+| 执行方块计划刻 | `ExecuteBlockTick` | 执行某个方块的一次计划刻 | `ServerLevel.tickBlock(...)` |
+| 执行流体计划刻 | `ExecuteFluidTick` | 执行某个流体的一次计划刻 | `ServerLevel.tickFluid(...)` |
+| 执行方块事件 | `ExecuteBlockEvent` | 执行某个方块事件 | `ServerLevel.doBlockEvent(...)` |
+| 实体运算 | `entityTick` | **单个**实体的 tick | `ServerLevel.tickNonPassenger(...)` |
+| 方块实体运算 | `blockEntityTick` | **单个**方块实体的 tick | `TickingBlockEntity.tick()` |
+
+> 后两者结构上不是 vanilla 的队列，但在步进语义上和队列同级，所以归入这一层。详见[核心概念](#核心概念)。
+
+### 更新层（Update）
+
+方块更新的传播。颜色：邻居更新**红**，形状更新**青**。
+
+| 时间轴显示 | 内部名 | 含义                                         | 对应 vanilla |
+|---|---|--------------------------------------------|---|
+| 邻居更新 | `NeighbourUpdate` | 一次 neighbor update（`neighborChanged`），邻居更新 | `NeighborUpdater.executeUpdate(...)` |
+| 形状更新 | `ShapeUpdate` | 一次 shape update（`updateShape`），状态更新        | `NeighborUpdater.executeShapeUpdate(...)`、`CollectingNeighborUpdater.shapeUpdate(...)` |
+
+### 动作事件 — 真正改变世界的那些
+
+| 时间轴显示 | 内部名 | 颜色 | 含义                                                                                                  | 对应 vanilla |
+|---|---|---|-----------------------------------------------------------------------------------------------------|---|
+| 放置方块 / 放置方块(失败) | `setBlock` | 绿 / 红 | 一次 `setBlock`。**这是个作用域节点** ， 它触发的方块更新是它的子事件。悬停可看方块状态 diff 与 flag 位分解；失败（返回 `false`）时显示为红色，且回放时不会被重现 | `Level.setBlock(pos, state, flags, limit)` |
+| 添加方块事件 | `addBlockEvent` | 黄 | 把一个方块事件**加入队列**                                                                                     | `Level.blockEvent(...)` |
+| 添加计划刻 | `addScheduleTick` | 黄 | 把一个计划刻**加入队列**。悬停可看触发刻、优先级、子顺序                                                                      | `LevelTicks.schedule(...)` |
+| 发布游戏事件 | `postGameEvent` | 深青 | 发出一个 game event（幽匿循声系统的信息）                                                                          | `ServerLevel.gameEvent(...)`、`GameEventDispatcher` |
+| 收到游戏事件 | `receivedGameEvent` | 深青 | 幽匿感测体接收到振动。会同时标出**振动源**位置                                                                           | `VibrationSystem.Ticker.receiveVibration` |
+| 活塞生成 / 活塞移除 | `movingPiston` | 浅紫 | 移动中的活塞方块实体出现或消失                                                                                     | `Level.setBlockEntity(...)`、`PistonMovingBlockEntity.finalTick` |
+| 活塞移动 | `movingPistonTick` | 浅紫 | 移动中的活塞每一刻的推进进度，回放时用方块展示实体模拟                                                                         | `PistonMovingBlockEntity.tick(...)` |
+| 实体生成 / 实体移除 | `entitySpawn` | 绿 / 深红 | 实体进入或离开录制区域（也包括真正的生成与死亡）                                                                            | `ServerLevel.addEntity`、`Entity.onRemoval`，以及跨区域边界移动 |
+| 实体移动 | `entityMove` | 金 | 一次实体位移，记录前后坐标与速度                                                                                    | `Entity.move(MoverType, Vec3)` |
+| 无形步骤 | `invisibleStep` | 白 | `BlockPosEvent` 基类的兜底类型，正常不该出现；出现了通常说明有人在酒吧点炒饭                                                      | — |
+
+### 关于颜色
+
+时间轴文本、BossBar、以及世界里的玻璃标记框共用同一套颜色，来自事件的 `getColor()`：
+
+| 颜色 | 含义 |
+|---|---|
+| 浅紫 | 阶段 / 活塞 |
+| 黄 | 队列项、入队动作 |
+| 红 | 邻居更新；或**空的**队列/方块实体运算；或**失败的** setBlock |
+| 青 | 形状更新 |
+| 绿 | 成功的 setBlock、实体生成 |
+| 金 | 实体运算 / 实体移动 |
+| 深青 | 游戏事件（发布 / 接收） |
+| 灰 | 正在**退出**某个作用域（EXIT 节点） |
+
+节点末尾的 `❌` 表示这是个**空节点** —— 走到了，但没有产生任何子事件。
 
 ---
 
@@ -266,22 +347,18 @@ BossBar 显示：`Replay [profile] Tick: 当前/总计 | Step: 当前/总计 | �
 
 全部位于 `/gamerule` 的 **MISC** 分类下，均为布尔值。
 
-| 游戏规则 | 默认 | 作用 |
-|---|---|---|
-| `microtimingreplay:skip_empty_phase` | `true` | 录制时丢弃**没有产生任何子事件**的阶段节点 |
-| `microtimingreplay:skip_empty_queue` | `true` | 录制时丢弃**空的队列节点** |
-| `microtimingreplay:skip_empty_update` | `true` | 录制时丢弃**空的更新节点**（这类节点数量极多，建议保持开启） |
-| `microtimingreplay:skip_empty_entity_tick` | `true` | 录制时丢弃**没有产生任何子事件的实体运算**（区域内每个实体每刻都会运算，建议保持开启） |
-| `microtimingreplay:skip_empty_block_entity_tick` | `true` | 录制时丢弃**没有产生任何子事件的方块实体运算**（同上，建议保持开启） |
-| `microtimingreplay:step_ignore_updates` | `true` | `forward/backward steps` 时**跳过** Update 类节点，不把它算作一步 |
-| `microtimingreplay:step_ignore_exiting` | `true` | `forward/backward steps` 时**跳过**"退出作用域"节点 |
-| `microtimingreplay:skip_delta_changes` | `true` | 回放渲染时**只标记当前这一步**；关闭后会把本次跨越的所有位置一起标出来（做大跨度跳转时便于看全貌） |
+| 游戏规则 | 默认      | 作用                                                  |
+|---|---------|-----------------------------------------------------|
+| `microtimingreplay:skip_empty_phase` | `true`  | 录制时丢弃**没有产生任何子事件**的阶段节点                             |
+| `microtimingreplay:skip_empty_queue` | `true`  | 录制时丢弃**空的队列节点**                                     |
+| `microtimingreplay:skip_empty_update` | `true`  | 录制时丢弃**空的更新节点**（这类节点数量极多，建议保持开启）                    |
+| `microtimingreplay:skip_empty_entity_tick` | `false` | 录制时丢弃**没有产生任何子事件的实体运算**（若场景里有实体，建议关闭）               |
+| `microtimingreplay:skip_empty_block_entity_tick` | `true`  | 录制时丢弃**没有产生任何子事件的方块实体运算**                           |
+| `microtimingreplay:step_ignore_updates` | `true`  | `forward/backward steps` 时**跳过** Update 类节点，不把它算作一步 |
+| `microtimingreplay:step_ignore_exiting` | `true`  | `forward/backward steps` 时**跳过**"退出作用域"节点           |
+| `microtimingreplay:skip_delta_changes` | `true`  | 回放渲染时**只标记当前这一步**；关闭后会把本次跨越的所有位置一起标出来（做大跨度跳转时便于看全貌） |
 
 前五条（`skip_empty_*`）影响**录制产物的体积**，改动只对之后的录制生效。后三条只影响**回放时的手感与显示**，随时可改。
-
-## 开发
-
-想给 MTR 添加新的事件类型，见 [docs/ADDING_EVENTS.md](docs/ADDING_EVENTS.md)。
 
 ---
 
@@ -305,19 +382,11 @@ BossBar 显示：`Replay [profile] Tick: 当前/总计 | Step: 当前/总计 | �
 - **录制前先 `/tick freeze`。** 模组不会自动冻结或解冻时间。回放不受影响，未冻结也能正确步进。
 - **回放会真实修改世界。** `replay start` 会把区域还原到录制起点，`replay stop` 再还原回来。若在回放过程中**服务器崩溃或被强杀**，`_replay` 备份不会被自动还原，你的现场会停留在录制起点的状态——此时可以重新 `/mtr replay start` 再正常 `stop` 一次来恢复。
 - **区域内的非玩家实体会被备份与还原。** 还原时先清空区域内实体，再从备份重建。
-- **无区域 = 不过滤。** 没有区域的 profile 会记录全世界的事件，profile 文件会迅速膨胀到不可用。
+- **无区域 = 不过滤。** 没有区域的 profile 会记录全世界的事件，请谨慎。
 - `subscribe`、`unsubscribe`、`screen`、`dump` **必须由玩家执行**（它们要么发给玩家一个界面，要么绑定到玩家）。其余指令控制台与命令方块均可执行。
 - `/mtr profile info` 的"当前查看中"状态是全服共享的单一变量，多人同时操作会互相干扰。
 
 ---
-
-## 构建
-
-```bash
-./gradlew build
-```
-
-产物位于 `build/libs/`。
 
 ## 许可证
 
