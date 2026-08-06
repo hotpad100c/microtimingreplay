@@ -39,6 +39,8 @@ public class MTRCommand {
 
     public static final SuggestionProvider<CommandSourceStack> PROFILE_SUGGESTION = (context, builder) -> SharedSuggestionProvider.suggest(ProfileManager.listProfiles(), builder);
 
+    public static final SuggestionProvider<CommandSourceStack> LEGACY_PROFILE_SUGGESTION = (context, builder) -> SharedSuggestionProvider.suggest(ProfileManager.listLegacyProfiles(), builder);
+
     public static final SuggestionProvider<CommandSourceStack> AREA_SUGGESTION = (context, builder) -> {
         try {
             String profileName = StringArgumentType.getString(context, "name");
@@ -65,6 +67,9 @@ public class MTRCommand {
                 .then(Commands.literal("info")
                     .then(Commands.argument("name", StringArgumentType.word()).suggests(PROFILE_SUGGESTION)
                         .executes(MTRCommand::infoProfile)))
+                .then(Commands.literal("migrate")
+                    .then(Commands.argument("name", StringArgumentType.word()).suggests(LEGACY_PROFILE_SUGGESTION)
+                        .executes(MTRCommand::migrateLegacyProfile)))
                 .then(Commands.literal("area")
                     .then(Commands.literal("add")
                         .then(Commands.argument("name", StringArgumentType.word()).suggests(PROFILE_SUGGESTION)
@@ -191,6 +196,34 @@ public class MTRCommand {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.profile.delete_failed", "Failed to delete profile: %s", name));
             return 0;
         }
+    }
+
+    private static int migrateLegacyProfile(CommandContext<CommandSourceStack> context) {
+        String name = StringArgumentType.getString(context, "name");
+        if (ProfileManager.hasProfile(name)) {
+            context.getSource().sendFailure(MTRComponent.translatable(
+                    "commands.mtr.profile.migrate_target_exists",
+                    "当前存档已存在同名配置，迁移已取消 / A profile with this name already exists in the current world; migration cancelled: %s",
+                    name
+            ));
+            return 0;
+        }
+
+        if (ProfileManager.migrateLegacyProfile(name)) {
+            context.getSource().sendSuccess(() -> MTRComponent.translatable(
+                    "commands.mtr.profile.migrated",
+                    "已将旧版配置迁移到当前存档 / Legacy profile migrated into the current world: %s",
+                    name
+            ), true);
+            return 1;
+        }
+
+        context.getSource().sendFailure(MTRComponent.translatable(
+                "commands.mtr.profile.migrate_failed",
+                "未找到旧版配置，或迁移未能完成 / No legacy profile found, or migration could not be completed: %s",
+                name
+        ));
+        return 0;
     }
 
         private static int infoProfile(CommandContext<CommandSourceStack> context) {

@@ -3,7 +3,6 @@ package ml.mypals.microtimingreplay.profile;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
 import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
@@ -17,17 +16,13 @@ import java.util.List;
 import java.util.Map;
 
 public class ProfileManager {
-    private static final File PROFILES_DIR = new File(FabricLoader.getInstance().getConfigDir().toFile(), "mtr_profiles");
-
     private record AreaNameCache(long lastModified, List<String> names) {}
 
     private static final Map<String, AreaNameCache> AREA_NAME_CACHE = new HashMap<>();
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void init() {
-        if (!PROFILES_DIR.exists()) {
-            PROFILES_DIR.mkdirs();
-        }
+        WorldScopedStorage.initCategory("mtr_profiles");
     }
 
     public static MTRProfile createProfile(String name) {
@@ -40,7 +35,7 @@ public class ProfileManager {
     }
 
     public static void saveProfile(MTRProfile profile) {
-        Path path = new File(PROFILES_DIR, profile.getName() + ".dat").toPath();
+        Path path = WorldScopedStorage.getProfileFile(profile.getName()).toPath();
         try {
             NbtIo.writeCompressed(profile.writeNBT(), path);
             AREA_NAME_CACHE.remove(profile.getName());
@@ -50,7 +45,7 @@ public class ProfileManager {
     }
 
     public static List<String> listAreaNames(String name) {
-        File file = new File(PROFILES_DIR, name + ".dat");
+        File file = WorldScopedStorage.getProfileFile(name);
         if (!file.exists()) {
             AREA_NAME_CACHE.remove(name);
             return List.of();
@@ -72,7 +67,7 @@ public class ProfileManager {
     }
 
     public static MTRProfile loadProfile(String name) {
-        Path path = new File(PROFILES_DIR, name + ".dat").toPath();
+        Path path = WorldScopedStorage.getProfileFile(name).toPath();
         if (!path.toFile().exists()) {
             return null;
         }
@@ -86,7 +81,7 @@ public class ProfileManager {
     }
 
     public static boolean deleteProfile(String name) {
-        File file = new File(PROFILES_DIR, name + ".dat");
+        File file = WorldScopedStorage.getProfileFile(name);
         boolean deleted = file.exists() && file.delete();
         if (deleted) {
             AREA_NAME_CACHE.remove(name);
@@ -97,13 +92,13 @@ public class ProfileManager {
     }
 
     public static boolean hasProfile(String name) {
-        File file = new File(PROFILES_DIR, name + ".dat");
+        File file = WorldScopedStorage.getProfileFile(name);
         return file.exists();
     }
 
     public static List<String> listProfiles() {
         List<String> profiles = new ArrayList<>();
-        File[] files = PROFILES_DIR.listFiles();
+        File[] files = WorldScopedStorage.getWorldDir("mtr_profiles").listFiles();
         if (files != null) {
             for (File file : files) {
                 if (file.getName().endsWith(".dat")) {
@@ -112,5 +107,26 @@ public class ProfileManager {
             }
         }
         return profiles;
+    }
+
+    public static List<String> listLegacyProfiles() {
+        List<String> profiles = new ArrayList<>();
+        File[] files = WorldScopedStorage.getCategoryDir("mtr_profiles").listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile() && file.getName().endsWith(".dat")) {
+                    profiles.add(file.getName().substring(0, file.getName().length() - 4));
+                }
+            }
+        }
+        return profiles;
+    }
+
+    public static boolean migrateLegacyProfile(String name) {
+        boolean migrated = WorldScopedStorage.migrateLegacyProfile(name);
+        if (migrated) {
+            AREA_NAME_CACHE.remove(name);
+        }
+        return migrated;
     }
 }

@@ -6,7 +6,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.util.MTRBlockFlags;
-import net.fabricmc.loader.api.FabricLoader;
+import ml.mypals.microtimingreplay.profile.WorldScopedStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -33,13 +33,9 @@ import java.util.List;
 import java.util.Optional;
 
 public class WorldBackupManager {
-    private static final File BACKUPS_DIR = new File(FabricLoader.getInstance().getConfigDir().toFile(), "mtr_backups");
-
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void init() {
-        if (!BACKUPS_DIR.exists()) {
-            BACKUPS_DIR.mkdirs();
-        }
+        WorldScopedStorage.initCategory("mtr_backups");
     }
 
     public static void backup(MTRProfile profile, String suffix) {
@@ -122,7 +118,7 @@ public class WorldBackupManager {
         
         rootTag.put("areas", areasTag);
         
-        Path path = new File(BACKUPS_DIR, profile.getName() + "_" + suffix + ".dat").toPath();
+        Path path = WorldScopedStorage.getBackupFile(profile.getName(), suffix).toPath();
         try {
             NbtIo.writeCompressed(rootTag, path);
         } catch (IOException e) {
@@ -133,7 +129,7 @@ public class WorldBackupManager {
     public static void restore(MTRProfile profile, String suffix) {
         if (MicroTimingReplay.server == null) return;
 
-        Path path = new File(BACKUPS_DIR, profile.getName() + "_" + suffix + ".dat").toPath();
+        Path path = WorldScopedStorage.getBackupFile(profile.getName(), suffix).toPath();
         if (!path.toFile().exists()) return;
         
         try {
@@ -232,9 +228,9 @@ public class WorldBackupManager {
     }
 
     public static void deleteBackups(String profileName) {
-        File recordBackup = new File(BACKUPS_DIR, profileName + "_record.dat");
+        File recordBackup = WorldScopedStorage.getBackupFile(profileName, "record");
         if (recordBackup.exists()) recordBackup.delete();
-        File replayBackup = new File(BACKUPS_DIR, profileName + "_replay.dat");
+        File replayBackup = WorldScopedStorage.getBackupFile(profileName, "replay");
         if (replayBackup.exists()) replayBackup.delete();
     }
 }

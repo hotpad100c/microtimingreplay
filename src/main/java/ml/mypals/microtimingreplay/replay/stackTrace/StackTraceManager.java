@@ -4,7 +4,7 @@ import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.profile.TickFrame;
-import net.fabricmc.loader.api.FabricLoader;
+import ml.mypals.microtimingreplay.profile.WorldScopedStorage;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
@@ -105,11 +105,7 @@ public class StackTraceManager {
     }
 
     private static File getProfileFile(String profileName) {
-        File dir = new File(FabricLoader.getInstance().getConfigDir().toFile(), "mtr_stacktrace");
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        return new File(dir, profileName + ".dat");
+        return WorldScopedStorage.getStackTraceFile(profileName);
     }
 
     public static void saveForProfile(String profileName) {

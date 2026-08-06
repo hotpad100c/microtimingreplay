@@ -175,6 +175,7 @@
 │  ├─ create <name>
 │  ├─ delete <name>
 │  ├─ info   <name>
+│  ├─ migrate <name>
 │  └─ area
 │     ├─ add    <name> <pos1> <pos2> [area_name]
 │     ├─ remove <name> <area_name>
@@ -210,6 +211,9 @@
 
 ### `/mtr profile delete <name>`
 删除 profile，同时删除它的世界备份和调用栈文件。**不可撤销。**
+
+### `/mtr profile migrate <name>`
+将旧版本存放在全局目录中的 profile **复制**到当前存档。旧文件会保留，目标存档中已存在同名 profile 时拒绝覆盖。迁移会一并复制录制起点备份、回放现场备份和调用栈文件。
 
 ### `/mtr profile info <name>`
 **开关式指令**——这是本模组交互的核心：
@@ -368,12 +372,12 @@ BossBar 显示：`Replay [profile] Tick: 当前/总计 | Step: 当前/总计 | �
 
 | 路径 | 内容 |
 |---|---|
-| `config/mtr_profiles/<name>.dat` | profile 本体：区域定义 + 全部事件帧（压缩 NBT） |
-| `config/mtr_backups/<name>_record.dat` | 录制起点的区域世界快照 |
-| `config/mtr_backups/<name>_replay.dat` | 回放开始前你的现场快照 |
-| `config/mtr_stacktrace/<name>.dat` | 每个 step 对应的调用栈 |
+| `config/mtr_profiles/<world-key>/<name>.dat` | 当前存档的 profile 本体：区域定义 + 全部事件帧（压缩 NBT） |
+| `config/mtr_backups/<world-key>/<name>_record.dat` | 当前存档中录制起点的区域世界快照 |
+| `config/mtr_backups/<world-key>/<name>_replay.dat` | 当前存档中回放开始前的现场快照 |
+| `config/mtr_stacktrace/<world-key>/<name>.dat` | 当前存档中每个 step 对应的调用栈 |
 
-> 这些目录是**全局的，不区分存档**。不同世界里的同名 profile 会互相覆盖；在 B 世界里回放 A 世界录的 profile，会把 A 的方块写进 B 的相同坐标。请给 profile 起有区分度的名字。
+> 数据按存档自动隔离。`<world-key>` 由存档路径生成，名称带可读的存档目录名和短哈希；不同存档可安全使用同名 profile。旧版本的全局 profile 不会自动覆盖当前存档，请使用 `/mtr profile migrate <name>` 显式复制所需数据。
 
 ---
 
