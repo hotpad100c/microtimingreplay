@@ -15,21 +15,25 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import org.joml.Vector3f;
 
 public class SetBlockEvent extends BlockPosEvent {
     public static final String TYPE = "setBlock";
     public int bitFlag = 0;
     public int updateLimit = 0;
+    public boolean succeed = false;
     
     private final int oldStateId;
     private final int newStateId;
 
-    public SetBlockEvent(long tick,int bitFlag,int updateLimit, int x, int y, int z, int oldStateId, int newStateId, String dimension) {
+    public SetBlockEvent(long tick,int bitFlag,int updateLimit, int x, int y, int z,
+                         int oldStateId, int newStateId, boolean succeed, String dimension) {
         super(tick, TYPE, new BlockPos(x, y, z), dimension);
         this.bitFlag = bitFlag;
         this.updateLimit = updateLimit;
         this.oldStateId = oldStateId;
         this.newStateId = newStateId;
+        this.succeed = succeed;
     }
 
     public int getOldStateId() { return oldStateId; }
@@ -37,23 +41,32 @@ public class SetBlockEvent extends BlockPosEvent {
     public int getBitFlag(){return bitFlag;}
     @Override
     public ChatFormatting getColor() {
-        return ChatFormatting.GREEN;
+        return succeed ? ChatFormatting.GREEN : ChatFormatting.RED;
     }
 
     @Override
-    public void apply(ServerLevel level, boolean forward) {
+    public MutableComponent getScoreboardText() {
+        MutableComponent comp = succeed
+                ? MTRComponent.translatable("mtr.scoreboard.event.leaf.setblock", "setBlock")
+                : MTRComponent.translatable("mtr.scoreboard.event.leaf.setblockfailed", "setBlock (failed)");
+        return appendPosText(comp);
+    }
+
+    @Override
+    public void applySelf(ServerLevel level, boolean forward) {
+        super.applySelf(level, forward);
+        if (!succeed) return;
         int stateId = forward ? getNewStateId() : getOldStateId();
         BlockState state = Block.stateById(stateId);
         BlockPos pos = new BlockPos(getX(), getY(), getZ());
         level.setBlock(pos, state, MTRBlockFlags.SILENT_SET_BLOCK, MTRBlockFlags.SILENT_UPDATE_LIMIT);
-        super.apply(level, forward);
     }
 
     @Override
-    public void display(ServerLevel level) {
-        BlockPos pos = getPos();
-        MTRMarker.spawnBlockDisplay(level, pos, Blocks.LIME_STAINED_GLASS.defaultBlockState(), 1.005F, ChatFormatting.GREEN);
+    public void display(ServerLevel level, Vector3f scale) {
+        super.display(level, scale);   // glass cube, green when it landed, red when it did not
 
+        BlockPos pos = getPos();
         BlockState oldState = Block.stateById(getOldStateId());
         BlockState newState = Block.stateById(getNewStateId());
 
@@ -72,7 +85,8 @@ public class SetBlockEvent extends BlockPosEvent {
         tag.putInt("newStateId", newStateId);
         tag.putInt("flag", bitFlag);
         tag.putInt("limit", updateLimit);
-        
+        tag.putBoolean("succeed", succeed);
+
         if (!getChildren().isEmpty()) {
             ListTag childList = new ListTag();
             for (MTREvent child : getChildren()) {
@@ -88,11 +102,12 @@ public class SetBlockEvent extends BlockPosEvent {
         BlockState oldState = Block.stateById(getOldStateId());
         BlockState newState = Block.stateById(getNewStateId());
 
-        MutableComponent text = MTRComponent.translatable(
-                "mtr.tooltip.setblock_title",
-                "SetBlockState @ [%d, %d, %d]",
-                getX(), getY(), getZ()
-        ).append(Component.literal("\n")).withStyle(ChatFormatting.AQUA);
+        MutableComponent text = (succeed
+                ? MTRComponent.translatable("mtr.tooltip.setblock_title",
+                        "SetBlockState @ [%d, %d, %d]", getX(), getY(), getZ())
+                : MTRComponent.translatable("mtr.tooltip.setblock_title_failed",
+                        "SetBlockState FAILED @ [%d, %d, %d]", getX(), getY(), getZ())
+        ).append(Component.literal("\n")).withStyle(succeed ? ChatFormatting.AQUA : ChatFormatting.RED);
 
         if (getDimension() != null && !getDimension().isEmpty()) {
             text.append(MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", getDimension()).withStyle(ChatFormatting.GOLD))
@@ -147,7 +162,10 @@ public class SetBlockEvent extends BlockPosEvent {
         int z = tag.getInt("z").orElse(0);
         int oldStateId = tag.getInt("oldStateId").orElse(0);
         int newStateId = tag.getInt("newStateId").orElse(0);
-        SetBlockEvent event = new SetBlockEvent(tick,bitFlag,updateLimit, x, y, z, oldStateId, newStateId, tag.getString("dimension").orElse(""));
+        // Recordings written before "succeed" existed only stored writes that landed.
+        boolean succeed = tag.getBoolean("succeed").orElse(true);
+        SetBlockEvent event = new SetBlockEvent(tick,bitFlag,updateLimit, x, y, z, oldStateId,
+                newStateId, succeed, tag.getString("dimension").orElse(""));
         MTREvent.readChildrenNBT(event, tag);
         return event;
     }

@@ -1,7 +1,6 @@
 package ml.mypals.microtimingreplay.event;
 
 import ml.mypals.microtimingreplay.config.MTRGameRules;
-import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -9,9 +8,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.Blocks;
-
 
 public class BlockEntityTickEvent extends BlockPosEvent {
     public static final String TYPE = "blockEntityTick";
@@ -38,11 +34,6 @@ public class BlockEntityTickEvent extends BlockPosEvent {
     @Override
     public ChatFormatting getColor() {
         return getChildren().isEmpty() ? ChatFormatting.RED : ChatFormatting.YELLOW;
-    }
-
-    @Override
-    public void display(ServerLevel level) {
-        MTRMarker.spawnBlockDisplay(level, getPos(), Blocks.YELLOW_STAINED_GLASS.defaultBlockState(), 1.005F, getColor());
     }
 
     @Override

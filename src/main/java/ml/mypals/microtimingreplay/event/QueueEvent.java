@@ -2,7 +2,6 @@ package ml.mypals.microtimingreplay.event;
 
 
 import ml.mypals.microtimingreplay.config.MTRGameRules;
-import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -10,8 +9,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.Blocks;
 
 public class QueueEvent extends BlockPosEvent {
     public static final String TYPE = "queue";
@@ -31,9 +28,6 @@ public class QueueEvent extends BlockPosEvent {
     @Override
     public boolean saveEvenWithoutAction(MinecraftServer server) {
         return !server.getGameRules().get(MTRGameRules.SKIP_EMPTY_QUEUE);
-    }
-    public void display(ServerLevel level) {
-        MTRMarker.spawnBlockDisplay(level, getPos(), Blocks.YELLOW_STAINED_GLASS.defaultBlockState(), 1.005F, getColor());
     }
 
 

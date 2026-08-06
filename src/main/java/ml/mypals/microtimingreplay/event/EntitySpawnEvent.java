@@ -20,6 +20,7 @@ import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.ValueInput;
 import java.util.Optional;
 import java.util.UUID;
+import org.joml.Vector3f;
 
 public class EntitySpawnEvent extends Vec3PosEvent {
     public static final String TYPE = "entitySpawn";
@@ -87,7 +88,7 @@ public class EntitySpawnEvent extends Vec3PosEvent {
     }
 
     @Override
-    public void apply(ServerLevel level, boolean forward) {
+    public void applySelf(ServerLevel level, boolean forward) {
         if (entityUuid == null || entityUuid.isEmpty()
                 || !level.dimension().identifier().toString().equals(getDimension())) return;
         UUID uuid;
@@ -124,6 +125,12 @@ public class EntitySpawnEvent extends Vec3PosEvent {
         } else {
             EntityReplayManager.removeEntity(level, uuid);
         }
+    }
+
+    @Override
+    public void display(ServerLevel level, Vector3f scale) {
+        // Entity events are shown by making the replay entity glow,
+        // do nothing here!
     }
 
     @Override

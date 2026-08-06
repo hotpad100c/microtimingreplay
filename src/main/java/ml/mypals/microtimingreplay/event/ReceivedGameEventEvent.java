@@ -68,7 +68,7 @@ public class ReceivedGameEventEvent extends Vec3PosEvent {
     }
 
     @Override
-    public void display(ServerLevel level) {
+    public void display(ServerLevel level, Vector3f engineScale) {
         Vec3 pos = getPos();
 
         Vector3f scale = new Vector3f(1.005f, 1.005f, 1.005f);

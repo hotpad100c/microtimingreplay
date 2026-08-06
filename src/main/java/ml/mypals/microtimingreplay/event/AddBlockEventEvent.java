@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import org.joml.Vector3f;
 
 public class AddBlockEventEvent extends BlockPosEvent {
 
@@ -113,9 +114,9 @@ public class AddBlockEventEvent extends BlockPosEvent {
     }
 
     @Override
-    public void display(ServerLevel level) {
+    public void display(ServerLevel level, Vector3f scale) {
+        super.display(level, scale);
         BlockPos pos = getPos();
-        MTRMarker.spawnBlockDisplay(level, pos, Blocks.YELLOW_STAINED_GLASS.defaultBlockState(), 1.005F, ChatFormatting.YELLOW);
         
         BlockState state = Block.stateById(blockStateId);
         String translationKey = state.getBlock().getDescriptionId();

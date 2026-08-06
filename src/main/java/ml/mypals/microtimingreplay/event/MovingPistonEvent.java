@@ -3,7 +3,6 @@ package ml.mypals.microtimingreplay.event;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 
-import com.mojang.math.Transformation;
 import ml.mypals.microtimingreplay.marker.PistonDisplayManager;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
@@ -23,6 +22,7 @@ import net.minecraft.world.level.block.state.properties.PistonType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.joml.Vector3f;
 
 public class MovingPistonEvent extends BlockPosEvent {
 
@@ -88,7 +88,8 @@ public class MovingPistonEvent extends BlockPosEvent {
         return appendPosText(MTRComponent.translatable(key, fallback));
     }
 
-    public void display(ServerLevel level) {
+    public void display(ServerLevel level, Vector3f scale) {
+        // PistonDisplayManager draws these as real block displays.
         BlockPos pos = getPos();
         if (isDespawn()) {
             PistonDisplayManager.removePistonDisplays(pos, level);

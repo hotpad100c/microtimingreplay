@@ -11,6 +11,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
+import org.joml.Vector3f;
 
 public class EntityMoveEvent extends Vec3PosEvent {
     public static final String TYPE = "entityMove";
@@ -85,7 +86,7 @@ public class EntityMoveEvent extends Vec3PosEvent {
     }
 
     @Override
-    public void apply(ServerLevel level, boolean forward) {
+    public void applySelf(ServerLevel level, boolean forward) {
         if (entityUuid == null || entityUuid.isEmpty()) return;
         UUID uuid;
         try {
@@ -104,6 +105,12 @@ public class EntityMoveEvent extends Vec3PosEvent {
             entity.setDeltaMovement(0,0,0);
             EntityReplayManager.syncEntityPosition(level, entity);
         }
+    }
+
+    @Override
+    public void display(ServerLevel level, Vector3f scale) {
+        // Entity events are shown by making the replay entity glow,
+        // do nothing here!
     }
 
     @Override

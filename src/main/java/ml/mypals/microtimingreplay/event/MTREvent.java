@@ -2,13 +2,18 @@ package ml.mypals.microtimingreplay.event;
 
 import net.minecraft.nbt.StringTag;
 
+import ml.mypals.microtimingreplay.marker.MTRMarker;
+import ml.mypals.microtimingreplay.util.DisplayUtils;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -94,7 +99,62 @@ public abstract class MTREvent {
         return true;
     }
 
+    public static final float MARKER_SCALE = 1.005f;
+
+    /**
+     * The block this event's marker sits on, or {@code null} when the event has no
+     * place in the world (phases, level ticks). Also tells the replay engine where
+     * markers stack, so it can turn overlapping ones into pillars.
+     */
+    public BlockPos getMarkerPos() {
+        return null;
+    }
+
+    /**
+     * Draws this event's marker. The default is a glass cube tinted by
+     * {@link #getColor()} at {@link #getMarkerPos()}.
+     * <p>
+     * Override and call {@code super} to add extra displays on top (see
+     * {@link SetBlockEvent}, which appends the state diff as floating text).
+     * Override with an empty body to opt out entirely — for events drawn by other
+     * means, such as pistons (their own block displays) or entities (glow).
+     *
+     * @param scale cube scale; the engine stretches it into a pillar when several
+     *              markers land on the same block
+     */
+    public void display(ServerLevel level, Vector3f scale) {
+        BlockPos pos = getMarkerPos();
+        if (pos == null) return;
+        ChatFormatting color = getColor();
+        MTRMarker.spawnBlockDisplay(level, Vec3.atLowerCornerOf(pos), DisplayUtils.getGlassState(color), scale, color);
+    }
+
+    /** Draws this event's marker at the default scale. */
+    public void display(ServerLevel level) {
+        display(level, new Vector3f(MARKER_SCALE, MARKER_SCALE, MARKER_SCALE));
+    }
+
+    /**
+     * Applies only this event's own effect on the world, never its children.
+     * <p>
+     * This is what {@code ReplayEngine} calls, because it walks every node of the
+     * flattened tree individually — recursing here would apply descendants a
+     * second time. Scope events that also mutate the world (notably
+     * {@link SetBlockEvent}, which encloses the updates its own write triggers)
+     * depend on this running for their {@code ENTER} action.
+     *
+     * @param forward {@code true} when stepping forward, {@code false} when rolling back
+     */
+    public void applySelf(ServerLevel level, boolean forward) {
+    }
+
+    /**
+     * Applies this event together with its whole subtree, in replay order.
+     * The step engine uses {@link #applySelf} instead, node by node.
+     */
+    @Deprecated
     public void apply(ServerLevel level, boolean forward) {
+        applySelf(level, forward);
         if (forward) {
             for (MTREvent child : children) {
                 child.apply(level, true);

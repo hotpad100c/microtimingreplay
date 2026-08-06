@@ -7,7 +7,6 @@ import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.*;
 import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
-import ml.mypals.microtimingreplay.util.DisplayUtils;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.marker.MarkerManager;
 import ml.mypals.microtimingreplay.marker.PistonDisplayManager;
@@ -27,7 +26,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.Entity;
 import org.joml.Vector3f;
@@ -377,16 +375,9 @@ public class ReplayEngine {
                 ReplayAction currentAction = flatActions.get(i);
                 if (currentAction.type == ActionType.LEAF) {
                     MTREvent evt = currentAction.event;
-                    if (evt instanceof BlockPosEvent b) {
-                        BlockPos posKey = new BlockPos(b.getX(), b.getY(), b.getZ());
-                        if (innerOccupied.add(posKey) && i != actionCursor - 1) {
-                            b.display(resolveLevel(level, b));
-                        }
-                    } else if (evt instanceof Vec3PosEvent v) {
-                        BlockPos posKey = new BlockPos((int) v.getX(), (int) v.getY(), (int) v.getZ());
-                        if (innerOccupied.add(posKey) && i != actionCursor - 1) {
-                            v.display(resolveLevel(level, v));
-                        }
+                    BlockPos posKey = evt.getMarkerPos();
+                    if (posKey != null && innerOccupied.add(posKey) && i != actionCursor - 1) {
+                        evt.display(resolveLevel(level, evt));
                     }
                 }
             }
@@ -400,36 +391,19 @@ public class ReplayEngine {
                 ReplayAction currentAction = flatActions.get(actionCursor - 1);
                 if (currentAction.type == ActionType.LEAF) {
                     leafEvent = currentAction.event;
-                    if (leafEvent instanceof BlockPosEvent b) {
-                        innerOccupied.add(new BlockPos(b.getX(), b.getY(), b.getZ()));
-                    }
-                    else if (leafEvent instanceof Vec3PosEvent v)
-                        innerOccupied.add(new BlockPos((int) v.getX(), (int) v.getY(), (int) v.getZ()));
+                    BlockPos p = leafEvent.getMarkerPos();
+                    if (p != null) innerOccupied.add(p);
                 } else if (currentAction.type == ActionType.EXIT) {
                     exitEvent = currentAction.event;
-                    if (exitEvent instanceof UpdateEvent u) {
-                        innerOccupied.add(new BlockPos(u.getX(), u.getY(), u.getZ()));
-                    } else if (exitEvent instanceof QueueEvent q) {
-                        innerOccupied.add(new BlockPos(q.getX(), q.getY(), q.getZ()));
-                    }
+                    BlockPos p = exitEvent.getMarkerPos();
+                    if (p != null) innerOccupied.add(p);
                 }
             }
         }
 
         for (int i = activeStack.size() - 1; i >= 0; i--) {
             MTREvent parent = activeStack.get(i);
-            if (parent instanceof EntityTickEvent || parent instanceof EntityMoveEvent || parent instanceof EntitySpawnEvent) {
-                continue;
-            }
-            BlockPos pos = null;
-            if (parent instanceof UpdateEvent u)
-                pos = new BlockPos(u.getX(), u.getY(), u.getZ());
-            else if (parent instanceof QueueEvent q)
-                pos = new BlockPos(q.getX(), q.getY(), q.getZ());
-            else if (parent instanceof BlockPosEvent b)
-                pos = new BlockPos(b.getX(), b.getY(), b.getZ());
-            else if (parent instanceof Vec3PosEvent v)
-                pos = BlockPos.containing(v.getX(), v.getY(), v.getZ());
+            BlockPos pos = parent.getMarkerPos();
 
             boolean isPillar = false;
             int pCount = 0;
@@ -441,7 +415,8 @@ public class ReplayEngine {
                 }
                 innerOccupied.add(pos);
             }
-            renderParentMarker(resolveLevel(level, parent), parent, false, isPillar, pCount);
+            // An entered scope draws itself, so setBlock still shows its state diff.
+            parent.display(resolveLevel(level, parent), markerScale(isPillar, pCount));
         }
 
         PistonDisplayManager.clearGlows(level);
@@ -450,66 +425,36 @@ public class ReplayEngine {
         if (leafEvent != null) {
             renderLeafMarker(resolveLevel(level, leafEvent), leafEvent);
         } else if (exitEvent != null) {
-            BlockPos pos = null;
-            switch (exitEvent) {
-                case UpdateEvent u -> pos = new BlockPos(u.getX(), u.getY(), u.getZ());
-                case QueueEvent q -> pos = new BlockPos(q.getX(), q.getY(), q.getZ());
-                case BlockPosEvent b -> pos = new BlockPos(b.getX(), b.getY(), b.getZ());
-                case Vec3PosEvent v -> pos = BlockPos.containing(v.getX(), v.getY(), v.getZ());
-                default -> {
-                }
-            }
-
-            boolean isPillar = false;
-            int pCount = 0;
+            BlockPos pos = exitEvent.getMarkerPos();
             if (pos != null) {
+                boolean isPillar = false;
+                int pCount = 0;
                 if (innerOccupied.contains(pos)) {
                     isPillar = true;
                     pCount = pillarCounts.getOrDefault(pos, 0);
                     pillarCounts.put(pos, pCount + 1);
                 }
+                renderExitMarker(resolveLevel(level, exitEvent), pos, markerScale(isPillar, pCount));
             }
-            renderParentMarker(resolveLevel(level, exitEvent), exitEvent, true, isPillar, pCount);
         }
 
         PistonDisplayManager.endRenderPistons(level);
     }
 
-    private static void renderParentMarker(ServerLevel level, MTREvent event, boolean isExit, boolean isPillar,
-            int pCount) {
-        if (event instanceof EntityTickEvent || event instanceof EntityMoveEvent || event instanceof EntitySpawnEvent) {
-            return;
+    /** Overlapping markers become progressively narrower, taller pillars. */
+    private static Vector3f markerScale(boolean isPillar, int pCount) {
+        if (!isPillar) {
+            return new Vector3f(MTREvent.MARKER_SCALE, MTREvent.MARKER_SCALE, MTREvent.MARKER_SCALE);
         }
+        float width = 0.1f + pCount * 0.15f;
+        float height = 1.1f + pCount * 0.1f;
+        return new Vector3f(width, height, width);
+    }
 
-        Vector3f scale;
-        if (isPillar) {
-            float width = 0.1f + pCount * 0.15f;
-            float height = 1.1f + pCount * 0.1f;
-            scale = new Vector3f(width, height, width);
-        } else {
-            scale = new Vector3f(1.005f, 1.005f, 1.005f);
-        }
-
-        BlockPos pos = null;
-        if (event instanceof UpdateEvent u)
-            pos = new BlockPos(u.getX(), u.getY(), u.getZ());
-        else if (event instanceof QueueEvent q)
-            pos = new BlockPos(q.getX(), q.getY(), q.getZ());
-        else if (event instanceof BlockPosEvent b)
-            pos = new BlockPos(b.getX(), b.getY(), b.getZ());
-        else if (event instanceof Vec3PosEvent v)
-            pos = BlockPos.containing(v.getX(), v.getY(), v.getZ());
-
-        if (pos != null) {
-            if (isExit) {
-                MTRMarker.spawnBlockDisplay(level, Vec3.atLowerCornerOf(pos),
-                        Blocks.GRAY_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.GRAY);
-            } else {
-                ChatFormatting color = event.getColor();
-                BlockState blockState = DisplayUtils.getGlassState(color);
-                MTRMarker.spawnBlockDisplay(level, Vec3.atLowerCornerOf(pos), blockState, scale, color);
-            }
-        }
+    /** A leaving scope is always grey, whatever colour the event itself carries. */
+    private static void renderExitMarker(ServerLevel level, BlockPos pos, Vector3f scale) {
+        MTRMarker.spawnBlockDisplay(level, Vec3.atLowerCornerOf(pos),
+                Blocks.GRAY_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.GRAY);
     }
 
     private static void renderLeafMarker(ServerLevel level, MTREvent event) {
@@ -546,11 +491,8 @@ public class ReplayEngine {
             } catch (Exception ignored) {}
         }
 
-        if (event instanceof BlockPosEvent blockPosEvent) {
-            blockPosEvent.display(targetLevel);
-        } else if (event instanceof Vec3PosEvent vec3PosEvent) {
-            vec3PosEvent.display(targetLevel);
-        }
+        // Events without a marker (phases, entity events) opt out inside display().
+        event.display(targetLevel);
     }
 
     private static boolean shouldBreak(ServerLevel level, ReplayAction action, String unit, PhaseEvent targetPhase,
@@ -574,6 +516,15 @@ public class ReplayEngine {
         }
 
         return false;
+    }
+
+    /**
+     * Which actions carry a world effect. A scope event's write happens when it is
+     * entered — {@code setBlock} encloses the updates its own write triggers — so
+     * ENTER counts alongside LEAF. EXIT is bookkeeping only.
+     */
+    private static boolean mutatesWorld(ReplayAction action) {
+        return action.type == ActionType.LEAF || action.type == ActionType.ENTER;
     }
 
     private static boolean isValidStep(ServerLevel level, ReplayAction action) {
@@ -621,8 +572,8 @@ public class ReplayEngine {
                 currentVirtualTick = action.frame.getTick();
                 ServerLevel actionLevel = resolveLevel(level, action.event);
 
-                if (action.type == ActionType.LEAF) {
-                    action.event.apply(actionLevel, true);
+                if (mutatesWorld(action)) {
+                    action.event.applySelf(actionLevel, true);
                 }
 
                 actionCursor++;
@@ -673,8 +624,8 @@ public class ReplayEngine {
                 currentVirtualTick = action.frame.getTick();
                 ServerLevel actionLevel = resolveLevel(level, action.event);
 
-                if (action.type == ActionType.LEAF) {
-                    action.event.apply(actionLevel, false);
+                if (mutatesWorld(action)) {
+                    action.event.applySelf(actionLevel, false);
                 }
 
                 if (actionCursor == 0)
@@ -724,8 +675,8 @@ public class ReplayEngine {
 
         while (actionCursor < targetCursor) {
             ReplayAction action = flatActions.get(actionCursor);
-            if (action.type == ActionType.LEAF) {
-                action.event.apply(resolveLevel(level, action.event), true);
+            if (mutatesWorld(action)) {
+                action.event.applySelf(resolveLevel(level, action.event), true);
             }
             actionCursor++;
         }
@@ -733,8 +684,8 @@ public class ReplayEngine {
         while (actionCursor > targetCursor) {
             actionCursor--;
             ReplayAction action = flatActions.get(actionCursor);
-            if (action.type == ActionType.LEAF) {
-                action.event.apply(resolveLevel(level, action.event), false);
+            if (mutatesWorld(action)) {
+                action.event.applySelf(resolveLevel(level, action.event), false);
             }
         }
 
@@ -769,8 +720,8 @@ public class ReplayEngine {
             ReplayAction action = flatActions.get(actionCursor);
             currentVirtualTick = action.frame.getTick();
 
-            if (action.type == ActionType.LEAF) {
-                action.event.apply(resolveLevel(level, action.event), true);
+            if (mutatesWorld(action)) {
+                action.event.applySelf(resolveLevel(level, action.event), true);
             }
 
             actionCursor++;
@@ -803,8 +754,8 @@ public class ReplayEngine {
             ReplayAction action = flatActions.get(actionCursor);
             currentVirtualTick = action.frame.getTick();
 
-            if (action.type == ActionType.LEAF) {
-                action.event.apply(resolveLevel(level, action.event), false);
+            if (mutatesWorld(action)) {
+                action.event.applySelf(resolveLevel(level, action.event), false);
             }
 
             takenActions++;

@@ -100,7 +100,8 @@ public class MovingPistonTickEvent extends BlockPosEvent {
         );
     }
 
-    public void display(ServerLevel level) {
+    public void display(ServerLevel level, Vector3f scale) {
+        // PistonDisplayManager draws these as real block displays.
         BlockPos pos = getPos();
         List<UUID> uuids = PistonDisplayManager.getPistonDisplayUUIDs(pos);
         if (uuids == null || uuids.isEmpty())

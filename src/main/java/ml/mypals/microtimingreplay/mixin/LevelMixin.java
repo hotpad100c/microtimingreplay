@@ -1,37 +1,29 @@
 package ml.mypals.microtimingreplay.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.BlockEntityTickEvent;
-import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
 import ml.mypals.microtimingreplay.event.MovingPistonEvent;
 import ml.mypals.microtimingreplay.event.SetBlockEvent;
 import net.minecraft.world.level.block.entity.TickingBlockEntity;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
-import ml.mypals.microtimingreplay.replay.EntityReplayManager;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.piston.PistonMovingBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.TagValueOutput;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Level.class)
 public abstract class LevelMixin implements ScheduledTickAccess {
@@ -46,12 +38,14 @@ public abstract class LevelMixin implements ScheduledTickAccess {
     @Shadow
     public abstract ResourceKey<Level> dimension();
 
-    @Inject(method = "setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;II)Z", at = @At("HEAD"))
-    private void mtr$onSetBlock(BlockPos pos, BlockState blockState, int updateFlags, int updateLimit, CallbackInfoReturnable<Boolean> cir) {
+    @WrapMethod(method = "setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;II)Z")
+    private boolean mtr$onSetBlock(BlockPos pos, BlockState blockState, int updateFlags, int updateLimit, Operation<Boolean> original) {
         if (MTRState.isRecording((Level) (Object) this)) {
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
-                if (activeProfile.outsideArea(pos, this.dimension().identifier().toString())) return;
+                if (activeProfile.outsideArea(pos, this.dimension().identifier().toString())) {
+                    return original.call(pos, blockState, updateFlags, updateLimit);
+                }
                 BlockState oldState = this.getBlockState(pos);
                 int oldStateId = Block.getId(oldState);
                 int newStateId = Block.getId(blockState);
@@ -60,12 +54,21 @@ public abstract class LevelMixin implements ScheduledTickAccess {
                 SetBlockEvent event = new SetBlockEvent(
                     currentTick, updateFlags, updateLimit,
                     pos.getX(), pos.getY(), pos.getZ(),
-                    oldStateId, newStateId, this.dimension().identifier().toString()
+                    oldStateId, newStateId, false, this.dimension().identifier().toString()
                 );
 
-                MTRState.recordStep(event);
+                MTRState.pushEvent(event);
+                boolean succeed = false;
+                try {
+                    succeed = original.call(pos, blockState, updateFlags, updateLimit);
+                    return succeed;
+                } finally {
+                    event.succeed = succeed;
+                    MTRState.popEvent();
+                }
             }
         }
+        return original.call(pos, blockState, updateFlags, updateLimit);
     }
 
     @Inject(method = "setBlockEntity", at = @At("HEAD"))

@@ -9,6 +9,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 public class EntityTickEvent extends Vec3PosEvent {
     public static final String TYPE = "entityTick";
@@ -64,9 +65,11 @@ public class EntityTickEvent extends Vec3PosEvent {
         .append(Component.literal(entityUuid != null ? entityUuid : "null").withStyle(ChatFormatting.YELLOW));
     }
 
+
     @Override
-    public void apply(ServerLevel level, boolean forward) {
-        super.apply(level, forward);
+    public void display(ServerLevel level, Vector3f scale) {
+        // Entity events are shown by making the replay entity glow,
+        // do nothing here!
     }
 
     @Override

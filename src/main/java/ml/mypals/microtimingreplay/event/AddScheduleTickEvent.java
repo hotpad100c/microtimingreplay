@@ -12,6 +12,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Blocks;
+import org.joml.Vector3f;
 
 public class AddScheduleTickEvent extends BlockPosEvent {
     public static final String TYPE = "addScheduleTick";
@@ -97,9 +98,9 @@ public class AddScheduleTickEvent extends BlockPosEvent {
     }
 
     @Override
-    public void display(ServerLevel level) {
+    public void display(ServerLevel level, Vector3f scale) {
+        super.display(level, scale);
         BlockPos pos = getPos();
-        MTRMarker.spawnBlockDisplay(level, pos, Blocks.YELLOW_STAINED_GLASS.defaultBlockState(), 1.005F, ChatFormatting.YELLOW);
         Component text = Component.literal(getTypeId()).withStyle(ChatFormatting.YELLOW)
                 .append(Component.literal("\n"))
                 .append(Component.literal( " Tri: " + triggerTick))

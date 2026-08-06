@@ -59,7 +59,7 @@ public class PostGameEventEvent extends Vec3PosEvent {
     }
 
     @Override
-    public void display(ServerLevel level) {
+    public void display(ServerLevel level, Vector3f engineScale) {
         Vec3 pos = getPos();
         Vector3f scale = new Vector3f(0.3f, 0.3f, 0.3f);
         Vec3 boxOrigin = pos.subtract(scale.x() / 2.0, scale.y() / 2.0, scale.z() / 2.0);

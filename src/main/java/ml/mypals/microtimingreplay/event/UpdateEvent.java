@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import org.joml.Vector3f;
 
 
 public class UpdateEvent extends MTREvent {
@@ -33,6 +34,11 @@ public class UpdateEvent extends MTREvent {
     public int getX() { return x; }
     public int getY() { return y; }
     public int getZ() { return z; }
+
+    @Override
+    public BlockPos getMarkerPos() {
+        return new BlockPos(x, y, z);
+    }
 
     public String getUpdateName() {
         return updateName;
@@ -76,10 +82,6 @@ public class UpdateEvent extends MTREvent {
         );
     }
 
-    @Override
-    public void apply(ServerLevel level, boolean forward) {
-        super.apply(level, forward);
-    }
 
     @Override
     public CompoundTag writeNBT() {

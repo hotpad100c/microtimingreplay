@@ -38,8 +38,7 @@ public class BlockPosEvent extends MTREvent {
     public void setDimension(String dim) { this.dimension = dim != null ? dim : ""; }
 
     @Override
-    public void apply(ServerLevel level, boolean forward) {
-        super.apply(level, forward);
+    public void applySelf(ServerLevel level, boolean forward) {
         ServerLevel targetLevel = level;
         if (dimension != null && !dimension.isEmpty()) {
             for (ServerLevel sl : level.getServer().getAllLevels()) {
@@ -55,8 +54,9 @@ public class BlockPosEvent extends MTREvent {
         }
     }
     
-    public void display(ServerLevel level) {
-
+    @Override
+    public BlockPos getMarkerPos() {
+        return getPos();
     }
 
     @Override
