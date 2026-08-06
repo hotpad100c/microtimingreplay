@@ -141,7 +141,6 @@ public class MTRProfile {
             }
             name = String.valueOf(maxId + 1);
         }
-        // If it already exists, don't overwrite blindly
         if (getArea(name) != null) return null;
 
         areas.add(new Area(name, p1.getX(), p1.getY(), p1.getZ(), p2.getX(), p2.getY(), p2.getZ(), dimension));
@@ -163,7 +162,7 @@ public class MTRProfile {
     public boolean renameArea(String oldName, String newName) {
         Area area = getArea(oldName);
         if (area == null) return false;
-        if (getArea(newName) != null) return false; // Name taken
+        if (getArea(newName) != null) return false; 
         area.name = newName;
         return true;
     }

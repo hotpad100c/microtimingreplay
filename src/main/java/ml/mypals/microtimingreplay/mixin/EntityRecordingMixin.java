@@ -10,9 +10,11 @@ import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.replay.EntityReplayManager;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -37,11 +39,17 @@ public abstract class EntityRecordingMixin {
                     long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
                     String entityTypeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
 
+
+                    TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, entity.level().registryAccess());
+                    entity.saveWithoutId(output);
+                    CompoundTag nbt = output.buildResult();
+                    nbt.putString("id", entityTypeKey);
+
                     EntitySpawnEvent event = new EntitySpawnEvent(
                         currentTick,
                         entity.getUUID().toString(),
                         entityTypeKey,
-                        new CompoundTag(),
+                        nbt,
                         entity.getX(), entity.getY(), entity.getZ(),
                         entity.getYRot(), entity.getXRot(),
                         true, // despawn

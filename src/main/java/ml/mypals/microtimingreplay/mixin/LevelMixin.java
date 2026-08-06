@@ -1,10 +1,14 @@
 package ml.mypals.microtimingreplay.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.event.BlockEntityTickEvent;
 import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
 import ml.mypals.microtimingreplay.event.MovingPistonEvent;
 import ml.mypals.microtimingreplay.event.SetBlockEvent;
+import net.minecraft.world.level.block.entity.TickingBlockEntity;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.replay.EntityReplayManager;
 import net.minecraft.core.BlockPos;
@@ -83,4 +87,32 @@ public abstract class LevelMixin implements ScheduledTickAccess {
         ));
     }
 
+
+    @WrapOperation(method = "tickBlockEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/entity/TickingBlockEntity;tick()V"))
+    private void mtr$onTickBlockEntity(TickingBlockEntity ticker, Operation<Void> original) {
+        Level level = (Level) (Object) this;
+        if (!MTRState.isRecording(level)) {
+            original.call(ticker);
+            return;
+        }
+
+        MTRProfile profile = MTRState.getActiveProfile();
+        String dim = this.dimension().identifier().toString();
+        if (profile == null || profile.outsideArea(ticker.getPos(), dim)) {
+            original.call(ticker);
+            return;
+        }
+
+        MTRState.pushEvent(new BlockEntityTickEvent(
+                MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick(),
+                ticker.getType(),
+                ticker.getPos(),
+                dim
+        ));
+        try {
+            original.call(ticker);
+        } finally {
+            MTRState.popEvent();
+        }
+    }
 }

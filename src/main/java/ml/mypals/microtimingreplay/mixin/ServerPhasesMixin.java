@@ -34,8 +34,11 @@ public abstract class ServerPhasesMixin {
                     "LevelTickPhase",
                     dim
             ));
-            original.call(level, hasTimeLeft);
-            MTRState.popEvent();
+            try {
+                original.call(level, hasTimeLeft);
+            } finally {
+                MTRState.popEvent();
+            }
         } else {
             original.call(level, hasTimeLeft);
         }
@@ -47,8 +50,11 @@ public abstract class ServerPhasesMixin {
                     this.tickCount - MTRState.getRecordStartTick(),
                     "AsyncTaskPhase"
             ));
-            original.call();
-            MTRState.popEvent();
+            try {
+                original.call();
+            } finally {
+                MTRState.popEvent();
+            }
         } else {
             original.call();
         }

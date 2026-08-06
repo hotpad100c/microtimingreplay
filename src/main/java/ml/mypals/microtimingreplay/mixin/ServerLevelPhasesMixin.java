@@ -59,7 +59,6 @@ public abstract class ServerLevelPhasesMixin {
         }
     }
 
-    // Because mappings might vary, we'll try injecting into doBlockEvent first.
     @Inject(method = "tick", at = @At(ordinal = 0, target = "Lnet/minecraft/world/ticks/LevelTicks;tick(JILjava/util/function/BiConsumer;)V", value = "INVOKE", shift = At.Shift.BEFORE))
     private void mtr$onDoBlockTileTickHead(BooleanSupplier haveTime, CallbackInfo ci) {
         if (MTRState.isRecording((ServerLevel) (Object) this)) {
@@ -84,8 +83,11 @@ public abstract class ServerLevelPhasesMixin {
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
                     "IceAndSnowPhase"
             ));
-            original.call(instance, pos);
-            MTRState.popEvent();
+            try {
+                original.call(instance, pos);
+            } finally {
+                MTRState.popEvent();
+            }
         }else {
             original.call(instance, pos);
         }
@@ -97,8 +99,11 @@ public abstract class ServerLevelPhasesMixin {
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
                     "RandomTickPhase"
             ));
-            original.call(instance, serverLevel, pos, randomSource);
-            MTRState.popEvent();
+            try {
+                original.call(instance, serverLevel, pos, randomSource);
+            } finally {
+                MTRState.popEvent();
+            }
         }else {
             original.call(instance, serverLevel, pos, randomSource);
         }
@@ -142,8 +147,12 @@ public abstract class ServerLevelPhasesMixin {
                     ));
                 } else if (wasInside && !isInside) {
                     // Entity left recorded area
+                    TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
+                    entity.saveWithoutId(output);
+                    CompoundTag nbt = output.buildResult();
+                    nbt.putString("id", entityTypeKey);
                     MTRState.recordStep(new EntitySpawnEvent(
-                        currentTick, uuid, entityTypeKey, new CompoundTag(),
+                        currentTick, uuid, entityTypeKey, nbt,
                         entity.getX(), entity.getY(), entity.getZ(),
                         entity.getYRot(), entity.getXRot(), true,dim
                     ));
@@ -156,8 +165,11 @@ public abstract class ServerLevelPhasesMixin {
                     );
 
                     MTRState.pushEvent(tickEvent);
-                    original.call(entity);
-                    MTRState.popEvent();
+                    try {
+                        original.call(entity);
+                    } finally {
+                        MTRState.popEvent();
+                    }
                     return;
                 }
             }
@@ -173,8 +185,11 @@ public abstract class ServerLevelPhasesMixin {
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
                     "BlockEntityPhase"
             ));
-            original.call(instance);
-            MTRState.popEvent();
+            try {
+                original.call(instance);
+            } finally {
+                MTRState.popEvent();
+            }
         }else {
             original.call(instance);
         }
@@ -187,8 +202,11 @@ public abstract class ServerLevelPhasesMixin {
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
                     "DragonFightPhase"
             ));
-            original.call(instance);
-            MTRState.popEvent();
+            try {
+                original.call(instance);
+            } finally {
+                MTRState.popEvent();
+            }
         }else {
             original.call(instance);
         }
@@ -197,13 +215,16 @@ public abstract class ServerLevelPhasesMixin {
 
     @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerChunkCache;tick(Ljava/util/function/BooleanSupplier;Z)V"))
     private void mtr$onTickChunk(ServerChunkCache instance, BooleanSupplier haveTime, boolean tickChunks, Operation<Void> original) {
-        if (MTRState.isRecording(this.getServer().getLevel(Level.END))) {
+        if (MTRState.isRecording((ServerLevel) (Object) this)) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
                     "ChunkTickPhase"
             ));
-            original.call(instance, haveTime, tickChunks);
-            MTRState.popEvent();
+            try {
+                original.call(instance, haveTime, tickChunks);
+            } finally {
+                MTRState.popEvent();
+            }
         }else {
             original.call(instance, haveTime, tickChunks);
         }
@@ -216,8 +237,11 @@ public abstract class ServerLevelPhasesMixin {
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
                     "EntityTickPhase"
             ));
-            original.call(instance, action);
-            MTRState.popEvent();
+            try {
+                original.call(instance, action);
+            } finally {
+                MTRState.popEvent();
+            }
         } else {
             original.call(instance, action);
         }

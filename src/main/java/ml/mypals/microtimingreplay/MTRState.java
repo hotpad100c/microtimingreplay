@@ -15,6 +15,7 @@ import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
 import ml.mypals.microtimingreplay.replay.ReplayEngine;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
+import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.ServerTickRateManager;
 import net.minecraft.world.level.Level;
@@ -79,8 +80,13 @@ public class MTRState {
         scanExistingEntities(server, profile);
 
         ServerTickRateManager manager = server.tickRateManager();
+        manager.stepGameIfPaused(advance);
 
-        return manager.stepGameIfPaused(advance);
+        return true;
+    }
+
+    public static boolean isTimeFrozen(MinecraftServer server) {
+        return server != null && server.tickRateManager().isFrozen();
     }
 
     public static void stopRecording() {
@@ -88,7 +94,7 @@ public class MTRState {
             long ticks = MicroTimingReplay.server.getTickCount() - recordStartTick;
             activeProfile.setTicksRecorded((int) ticks);
             ProfileManager.saveProfile(activeProfile);
-            ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager.collectAndSaveForProfile(activeProfile);
+            StackTraceManager.collectAndSaveForProfile(activeProfile);
             currentState = State.IDLE;
             activeProfile = null;
             recordTargetTick = -1;
@@ -97,8 +103,15 @@ public class MTRState {
     }
 
     public static void checkAutoStop(MinecraftServer server) {
-        if (currentState == State.RECORDING && recordTargetTick != -1) {
-            if (server.getTickCount() >= recordTargetTick) {
+        if (currentState == State.RECORDING) {
+
+            if (!currentEventStack.isEmpty()) {
+                MicroTimingReplay.LOGGER.warn(
+                        "Event stack was not empty at end of tick ({} entries left); discarding residue.",
+                        currentEventStack.size());
+                currentEventStack.clear();
+            }
+            if (recordTargetTick != -1 && server.getTickCount() >= recordTargetTick) {
                 stopRecording();
             }
         } else if (currentState == State.REPLAYING) {
@@ -147,7 +160,6 @@ public class MTRState {
 
         MTREvent popped = currentEventStack.pop();
         if (popped.getChildren().isEmpty() && !popped.saveEvenWithoutAction(MicroTimingReplay.server)) {
-            // Prune empty events to save space
             if (!currentEventStack.isEmpty()) {
                 currentEventStack.peek().removeChild(popped);
             } else {

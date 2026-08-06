@@ -99,15 +99,12 @@ public class MovingPistonEvent extends BlockPosEvent {
 
     private void spawnPistonDisplays(ServerLevel level, BlockPos pos) {
         BlockState movedState = Block.stateById(movedBlockStateId);
-        Direction direction = getDirection();
-
-        // Spawn the BlockDisplay at the destination　pos!
-        // MovingPistonTickEvent will apply the offset.
+        Direction facing = getDirection();
 
         float extProg = extending ? (0.0f - 1.0f) : (1.0f - 0.0f);
-        float xOff = direction.getStepX() * extProg;
-        float yOff = direction.getStepY() * extProg;
-        float zOff = direction.getStepZ() * extProg;
+        float xOff = facing.getStepX() * extProg;
+        float yOff = facing.getStepY() * extProg;
+        float zOff = facing.getStepZ() * extProg;
 
         List<UUID> oldUuids = PistonDisplayManager.claimOldPistonDisplay(pos);
         if (oldUuids != null && !oldUuids.isEmpty()) {
@@ -118,25 +115,21 @@ public class MovingPistonEvent extends BlockPosEvent {
         List<UUID> uuids = new ArrayList<>();
 
         if (isSourcePiston && !extending) {
-            // Retracting source piston: render piston HEAD + extended BASE
             PistonType pistonType = movedState.is(Blocks.STICKY_PISTON) ? PistonType.STICKY : PistonType.DEFAULT;
-            Direction facing = direction;
 
-            // Piston head at destination
             BlockState pistonHeadState = Blocks.PISTON_HEAD.defaultBlockState()
                     .setValue(PistonHeadBlock.TYPE, pistonType)
                     .setValue(PistonHeadBlock.FACING, facing)
-                    .setValue(PistonHeadBlock.SHORT, false); // initial: not yet retracted, progress=0
+                    .setValue(PistonHeadBlock.SHORT, false);
             UUID headUuid = PistonDisplayManager.spawnStaticBlockDisplay(level, pos, pistonHeadState, xOff, yOff, zOff);
             uuids.add(headUuid);
 
-            // Extended base at pos
             BlockState baseState = movedState.hasProperty(PistonBaseBlock.EXTENDED) ?
                     movedState.setValue(PistonBaseBlock.EXTENDED, true) :
                     (pistonType == PistonType.STICKY ? Blocks.STICKY_PISTON : Blocks.PISTON).defaultBlockState()
                             .setValue(PistonBaseBlock.FACING, facing)
                             .setValue(PistonBaseBlock.EXTENDED, true);
-            UUID baseUuid = PistonDisplayManager.spawnStaticBlockDisplay(level, pos, baseState, 0, 0, 0); // base doesn't move
+            UUID baseUuid = PistonDisplayManager.spawnStaticBlockDisplay(level, pos, baseState, 0, 0, 0);
             uuids.add(baseUuid);
 
         } else if (movedState.is(Blocks.PISTON_HEAD)) {

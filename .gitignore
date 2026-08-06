@@ -46,3 +46,4 @@ replay_*.log
 .gitignore
 
 /plan/
+/tests/

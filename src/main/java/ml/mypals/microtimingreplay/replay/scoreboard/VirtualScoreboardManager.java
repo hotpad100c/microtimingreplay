@@ -56,13 +56,13 @@ public class VirtualScoreboardManager {
             String fakePlayer = "line_" + i;
             player.connection.send(new ClientboundResetScorePacket(fakePlayer, OBJECTIVE_NAME));
         }
-        
+
         // Add or update current lines
         for (int i = 0; i < newCount; i++) {
             String fakePlayer = "line_" + i;
             int score = newCount - i;
             TimelineGenerator.ScoreLine line = lines.get(i);
-            Optional<NumberFormat> nf = Optional.empty();
+            Optional<NumberFormat> nf;
             if (line.stepIndex() != -1) {
                 nf = Optional.of(new FixedFormat(Component.literal(String.valueOf(line.stepIndex())).withStyle(ChatFormatting.WHITE)));
             } else {

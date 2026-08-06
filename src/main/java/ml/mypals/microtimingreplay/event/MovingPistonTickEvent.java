@@ -83,7 +83,7 @@ public class MovingPistonTickEvent extends BlockPosEvent {
                 .append(MTRComponent.translatable("mtr.tooltip.moved_block", "Moved Block: %s", blockKey).withStyle(ChatFormatting.AQUA));
     }
 
-    /** Mirrors PistonMovingBlockEntity.getExtendedProgress() */
+
     private float getExtendedProgress(float p) {
         return extending ? (p - 1.0f) : (1.0f - p);
     }
@@ -106,13 +106,12 @@ public class MovingPistonTickEvent extends BlockPosEvent {
         if (uuids == null || uuids.isEmpty())
             return;
 
-        Direction direction = getDirection();
-        // Direction movementDir = extending ? direction : direction.getOpposite();
+        Direction facing = getDirection();
         float extProg = getExtendedProgress(progress);
 
-        float xOff = direction.getStepX() * extProg;
-        float yOff = direction.getStepY() * extProg;
-        float zOff = direction.getStepZ() * extProg;
+        float xOff = facing.getStepX() * extProg;
+        float yOff = facing.getStepY() * extProg;
+        float zOff = facing.getStepZ() * extProg;
 
         BlockState movedState = Block.stateById(movedBlockStateId);
 
@@ -121,12 +120,10 @@ public class MovingPistonTickEvent extends BlockPosEvent {
         if (isSourcePiston && !extending) {
             // [0]=head at renderPos, [1]=base at basePos
             if (!uuids.isEmpty()) {
-                // Update piston head SHORT property based on progress
                 boolean shortHead = clampedProgress >= 0.5f;
                 var headEntity = level.getEntity(uuids.getFirst());
                 if (headEntity instanceof Display.BlockDisplay bd) {
                     PistonType ptype = movedState.is(Blocks.STICKY_PISTON) ? PistonType.STICKY : PistonType.DEFAULT;
-                    Direction facing = direction;
                     BlockState headState = Blocks.PISTON_HEAD.defaultBlockState()
                             .setValue(PistonHeadBlock.TYPE, ptype)
                             .setValue(PistonHeadBlock.FACING, facing)
@@ -136,7 +133,6 @@ public class MovingPistonTickEvent extends BlockPosEvent {
                 }
             }
             if (uuids.size() >= 2) {
-                // Base stays at its pos, no offset
                 var baseEntity = level.getEntity(uuids.get(1));
                 if (baseEntity instanceof Display.BlockDisplay bd) {
                     PistonDisplayManager.applyOffset(bd, 0, 0, 0);
@@ -144,7 +140,6 @@ public class MovingPistonTickEvent extends BlockPosEvent {
             }
 
         } else if (movedState.is(Blocks.PISTON_HEAD)) {
-            // Moving piston head: update SHORT based on progress
             if (!uuids.isEmpty()) {
                 var entity = level.getEntity(uuids.getFirst());
                 if (entity instanceof Display.BlockDisplay bd) {
@@ -155,7 +150,6 @@ public class MovingPistonTickEvent extends BlockPosEvent {
                 }
             }
         } else {
-            // Regular block: just update offset
             if (!uuids.isEmpty()) {
                 var entity = level.getEntity(uuids.getFirst());
                 if (entity instanceof Display.BlockDisplay bd) {

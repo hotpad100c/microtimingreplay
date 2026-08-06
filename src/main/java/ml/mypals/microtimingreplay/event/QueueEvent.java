@@ -1,7 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
 
-import ml.mypals.microtimingreplay.MTRGameRules;
+import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
@@ -21,6 +21,11 @@ public class QueueEvent extends BlockPosEvent {
     public QueueEvent(long tick, String queueName, BlockPos pos, String dimension) {
         super(tick, TYPE, pos, dimension);
         this.queueName = queueName;
+    }
+
+    @Override
+    public boolean isQueueScope() {
+        return true;
     }
 
     @Override

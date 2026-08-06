@@ -1,10 +1,12 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
@@ -22,6 +24,16 @@ public class EntityTickEvent extends Vec3PosEvent {
 
     public String getEntityUuid() { return entityUuid; }
     public String getEntityType() { return entityType; }
+
+    @Override
+    public boolean isQueueScope() {
+        return true;
+    }
+
+    @Override
+    public boolean saveEvenWithoutAction(MinecraftServer server) {
+        return !server.getGameRules().get(MTRGameRules.SKIP_EMPTY_ENTITY_TICK);
+    }
 
     @Override
     public ChatFormatting getColor() {

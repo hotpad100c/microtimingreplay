@@ -56,7 +56,7 @@ public class BlockPosEvent extends MTREvent {
     }
     
     public void display(ServerLevel level) {
-        // Default base logic can be overridden
+
     }
 
     @Override

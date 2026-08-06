@@ -101,8 +101,7 @@ public class DisplayUtils {
                 .append(Component.literal("\n↓\n").withStyle(ChatFormatting.DARK_GRAY))
                 .append(newComp);
     }
-
-// ========== 辅助方法 ==========
+    
 
     private static MutableComponent formatBlockName(BlockState state) {
         return Component.literal(BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString())

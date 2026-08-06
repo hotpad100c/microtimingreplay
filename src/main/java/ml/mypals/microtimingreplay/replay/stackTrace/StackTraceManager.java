@@ -1,8 +1,10 @@
 package ml.mypals.microtimingreplay.replay.stackTrace;
 
+import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.profile.TickFrame;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
@@ -87,7 +89,7 @@ public class StackTraceManager {
             CompoundTag tag = writeNBT();
             NbtIo.writeCompressed(tag, file.toPath());
         } catch (IOException e) {
-            e.printStackTrace();
+            MicroTimingReplay.LOGGER.error("Failed to save stack traces to {}", file, e);
         }
     }
 
@@ -98,12 +100,12 @@ public class StackTraceManager {
             CompoundTag tag = NbtIo.readCompressed(file.toPath(), NbtAccounter.unlimitedHeap());
             readNBT(tag);
         } catch (IOException e) {
-            e.printStackTrace();
+            MicroTimingReplay.LOGGER.error("Failed to load stack traces from {}", file, e);
         }
     }
 
     private static File getProfileFile(String profileName) {
-        File dir = new File(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().toFile(), "mtr_stacktrace");
+        File dir = new File(FabricLoader.getInstance().getConfigDir().toFile(), "mtr_stacktrace");
         if (!dir.exists()) {
             dir.mkdirs();
         }

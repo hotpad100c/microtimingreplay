@@ -3,6 +3,7 @@ package ml.mypals.microtimingreplay.event;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 
 import ml.mypals.microtimingreplay.util.DisplayUtils;
+import ml.mypals.microtimingreplay.util.MTRBlockFlags;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -44,7 +45,7 @@ public class SetBlockEvent extends BlockPosEvent {
         int stateId = forward ? getNewStateId() : getOldStateId();
         BlockState state = Block.stateById(stateId);
         BlockPos pos = new BlockPos(getX(), getY(), getZ());
-        level.setBlock(pos, state, 2 | 816, 0);
+        level.setBlock(pos, state, MTRBlockFlags.SILENT_SET_BLOCK, MTRBlockFlags.SILENT_UPDATE_LIMIT);
         super.apply(level, forward);
     }
 

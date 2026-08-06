@@ -1,17 +1,14 @@
 package ml.mypals.microtimingreplay.command;
 
-import ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator;
-
-
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import java.util.List;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import ml.mypals.microtimingreplay.MTRState;
+import ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
@@ -45,15 +42,15 @@ public class MTRCommand {
     public static final SuggestionProvider<CommandSourceStack> AREA_SUGGESTION = (context, builder) -> {
         try {
             String profileName = StringArgumentType.getString(context, "name");
-            MTRProfile profile = ProfileManager.loadProfile(profileName);
-            if (profile != null) {
-                return SharedSuggestionProvider.suggest(profile.getAreas().stream().map(a -> a.name), builder);
-            }
+            return SharedSuggestionProvider.suggest(ProfileManager.listAreaNames(profileName), builder);
         } catch (IllegalArgumentException ignored) {
-            // "name" might not be parsed yet
+
         }
         return Suggestions.empty();
     };
+
+    public static final SuggestionProvider<CommandSourceStack> UNIT_SUGGESTION =
+            (context, builder) -> SharedSuggestionProvider.suggest(ReplayEngine.STEP_UNITS, builder);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment) {
         dispatcher.register(Commands.literal("mtr")
@@ -120,13 +117,13 @@ public class MTRCommand {
                         .executes(c -> openReplayScreen(c, IntegerArgumentType.getInteger(c, "page")))))
                 .then(Commands.literal("forward")
                     .then(Commands.argument("unit", StringArgumentType.word())
-                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(new String[]{"ticks", "phase", "queue", "updates", "steps"}, builder))
+                        .suggests(UNIT_SUGGESTION)
                         .then(Commands.argument("amount", IntegerArgumentType.integer(1))
                             .executes(c -> executeForward(c, IntegerArgumentType.getInteger(c, "amount"), StringArgumentType.getString(c, "unit"))))
                         .executes(c -> executeForward(c, 1, StringArgumentType.getString(c, "unit")))))
                 .then(Commands.literal("backward")
                     .then(Commands.argument("unit", StringArgumentType.word())
-                        .suggests((context, builder) -> SharedSuggestionProvider.suggest(new String[]{"ticks", "phase", "queue", "updates", "steps"}, builder))
+                        .suggests(UNIT_SUGGESTION)
                         .then(Commands.argument("amount", IntegerArgumentType.integer(1))
                             .executes(c -> executeBackward(c, IntegerArgumentType.getInteger(c, "amount"), StringArgumentType.getString(c, "unit"))))
                         .executes(c -> executeBackward(c, 1, StringArgumentType.getString(c, "unit")))))
@@ -135,16 +132,14 @@ public class MTRCommand {
                         .executes(c -> executeJump(c, IntegerArgumentType.getInteger(c, "step")))))
                 .then(Commands.literal("dump")
                     .then(Commands.argument("step", IntegerArgumentType.integer(1))
-                        .executes(c -> executeDumpStackTrace(c, IntegerArgumentType.getInteger(c, "step"), 0))
-                        .then(Commands.argument("page", IntegerArgumentType.integer(0))
-                            .executes(c -> executeDumpStackTrace(c, IntegerArgumentType.getInteger(c, "step"), IntegerArgumentType.getInteger(c, "page"))))))
+                        .executes(c -> executeDumpStackTrace(c, IntegerArgumentType.getInteger(c, "step")))))
                 .then(Commands.literal("auto")
                     .then(Commands.literal("stop")
                         .executes(MTRCommand::stopAutoReplay))
                     .then(Commands.argument("direction", StringArgumentType.word())
                         .suggests((context, builder) -> SharedSuggestionProvider.suggest(new String[]{"forward", "backward"}, builder))
                         .then(Commands.argument("unit", StringArgumentType.word())
-                            .suggests((context, builder) -> SharedSuggestionProvider.suggest(new String[]{"ticks", "phase", "queue", "updates", "steps"}, builder))
+                            .suggests(UNIT_SUGGESTION)
                             .then(Commands.argument("delay", IntegerArgumentType.integer(1))
                                 .then(Commands.argument("steps", IntegerArgumentType.integer(1))
                                     .executes(c -> executeAutoReplay(c,
@@ -178,10 +173,6 @@ public class MTRCommand {
         MTRProfile profile = new MTRProfile(name);
         ProfileManager.saveProfile(profile);
 
-        /*if(context.getSource().getPlayer() != null){
-            clearChat(context.getSource().getPlayer());
-        }*/
-
         context.getSource().sendSuccess(() -> MTRComponent.translatable("commands.mtr.profile.created", "Profile created: %s", name), true);
         return infoProfile(context);
     }
@@ -206,9 +197,6 @@ public class MTRCommand {
         String name = StringArgumentType.getString(context, "name");
         MTRProfile profile = ProfileManager.loadProfile(name);
         if (profile != null) {
-            /*if(context.getSource().getPlayer() != null){
-                clearChat(context.getSource().getPlayer());
-            }*/
             ServerLevel level = context.getSource().getLevel();
             for (Entity entity : level.getAllEntities()) {
                 if (entity instanceof Display) {
@@ -351,6 +339,11 @@ public class MTRCommand {
         }
 
         context.getSource().sendSuccess(() -> MTRComponent.translatable("commands.mtr.record.started_ticks", "Started recording for %d ticks", advance), true);
+        if (!MTRState.isTimeFrozen(context.getSource().getServer())) {
+            context.getSource().sendSystemMessage(MTRComponent.translatable(
+                    "commands.mtr.record.not_frozen_hint",
+                    "Time is not frozen, so the world was not stepped. Recording is running and will stop on schedule; run /tick freeze first for a controlled capture."));
+        }
         return 1;
     }
 
@@ -390,7 +383,7 @@ public class MTRCommand {
         }
     }
 
-    private static int startReplay(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    private static int startReplay(CommandContext<CommandSourceStack> context) {
         String name = StringArgumentType.getString(context, "name");
         MTRProfile profile = ProfileManager.loadProfile(name);
         if (profile == null) {
@@ -400,8 +393,10 @@ public class MTRCommand {
 
         if (MTRState.startReplaying(name)) {
             ReplayEngine.startReplay(profile, context.getSource().getLevel());
-            subscribeReplay(context);
-            sendReplayFeedback(context.getSource(), MTRComponent.translatable("commands.mtr.replay.started_frozen", "Started replaying profile: %s, (freezing time...)", name));
+
+            ReplayEngine.subscribe(context.getSource().getPlayer());
+
+            sendReplayFeedback(context.getSource(), MTRComponent.translatable("commands.mtr.replay.started", "Started replaying profile: %s", name));
             return 1;
         } else {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.cannot_start_state", "Cannot start replay. Current state: %s", MTRState.getCurrentState().toString()));
@@ -409,14 +404,15 @@ public class MTRCommand {
         }
     }
 
-    private static int stopReplay(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    private static int stopReplay(CommandContext<CommandSourceStack> context) {
         if (MTRState.getCurrentState() == MTRState.State.REPLAYING) {
-            unsubscribeReplay(context);
             MTRProfile profile = MTRState.getActiveProfile();
             String profileName = profile != null ? profile.getName() : "unknown";
+
             MTRState.stopReplaying();
             ReplayEngine.stopReplay();
-            sendReplayFeedback(context.getSource(), MTRComponent.translatable("commands.mtr.replay.stopped_unfrozen", "Stopped replaying profile: %s, (unfroze time...)", profileName));
+
+            sendReplayFeedback(context.getSource(), MTRComponent.translatable("commands.mtr.replay.stopped", "Stopped replaying profile: %s", profileName));
             return 1;
         } else {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.not_playing", "Not currently playing a replay."));
@@ -424,12 +420,17 @@ public class MTRCommand {
         }
     }
 
-    private static int subscribeReplay(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    private static int subscribeReplay(CommandContext<CommandSourceStack> context) {
         if (MTRState.getCurrentState() != MTRState.State.REPLAYING) {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.no_active_subscribe", "No active replay to subscribe to."));
             return 0;
         }
-        ReplayEngine.subscribe(context.getSource().getPlayerOrException());
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null) {
+            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.player_only", "This command can only be executed by a player."));
+            return 0;
+        }
+        ReplayEngine.subscribe(player);
         context.getSource().sendSuccess(() -> MTRComponent.translatable("commands.mtr.replay.subscribed_bossbar", "Subscribed to BossBar."), false);
         return 1;
     }
@@ -439,7 +440,11 @@ public class MTRCommand {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.not_playing", "Not currently playing a replay."));
             return 0;
         }
-        
+        if (ReplayEngine.isUnitInvalid(unit)) {
+            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.unknown_unit", "Unknown unit: %s", unit));
+            return 0;
+        }
+
         int taken = 0;
         if (unit.equals("ticks")) {
             taken = ReplayEngine.tickBackward(context.getSource().getLevel(), num);
@@ -457,6 +462,10 @@ public class MTRCommand {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.not_playing", "Not currently playing a replay."));
             return 0;
         }
+        if (ReplayEngine.isUnitInvalid(unit)) {
+            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.unknown_unit", "Unknown unit: %s", unit));
+            return 0;
+        }
 
         int taken;
         if (unit.equals("ticks")) {
@@ -470,56 +479,35 @@ public class MTRCommand {
         return 1;
     }
 
-    private static int openReplayScreen(CommandContext<CommandSourceStack> context, int page) throws CommandSyntaxException {
+    private static int openReplayScreen(CommandContext<CommandSourceStack> context, int page) {
         if (MTRState.getCurrentState() != MTRState.State.REPLAYING) {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.not_playing", "Not currently playing a replay."));
             return 0;
         }
-        
-        ServerPlayer player = context.getSource().getPlayerOrException();
+
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null) {
+            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.player_only", "This command can only be executed by a player."));
+            return 0;
+        }
         TimelineScreenGenerator.openTimeline(player, page);
         return 1;
     }
-    private static int unsubscribeReplay(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    private static int unsubscribeReplay(CommandContext<CommandSourceStack> context) {
         if (MTRState.getCurrentState() != MTRState.State.REPLAYING) {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.no_active_unsubscribe", "No active replay to unsubscribe from."));
             return 0;
         }
-        ReplayEngine.unsubscribe(context.getSource().getPlayerOrException());
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player == null) {
+            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.player_only", "This command can only be executed by a player."));
+            return 0;
+        }
+        ReplayEngine.unsubscribe(player);
         context.getSource().sendSuccess(() -> MTRComponent.translatable("commands.mtr.replay.unsubscribed_bossbar", "Unsubscribed from BossBar."), false);
         return 1;
     }
 
-    private static int replayAction(CommandContext<CommandSourceStack> context, boolean forward, boolean isSteps) {
-        if (MTRState.getCurrentState() != MTRState.State.REPLAYING) {
-            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.not_playing", "Not currently playing a replay."));
-            return 0;
-        }
-        
-        int num = IntegerArgumentType.getInteger(context, "num");
-        int taken;
-        
-        if (forward) {
-            if (isSteps) {
-                taken = ReplayEngine.stepForward(context.getSource().getLevel(), num, "steps");
-            } else {
-                taken = ReplayEngine.tickForward(context.getSource().getLevel(), num);
-            }
-        } else {
-            if (isSteps) {
-                taken = ReplayEngine.stepBackward(context.getSource().getLevel(), num, "steps");
-            } else {
-                taken = ReplayEngine.tickBackward(context.getSource().getLevel(), num);
-            }
-        }
-        
-        int finalTaken = taken;
-        String dir = forward ? "Forward" : "Backward";
-        String type = isSteps ? "steps" : "ticks";
-        sendReplayFeedback(context.getSource(), Component.literal(String.format("Replay moved %s %d %s.", dir, finalTaken, type)));
-        
-        return 1;
-    }
     private static int executeJump(CommandContext<CommandSourceStack> context, int targetStep) {
         if (MTRState.getCurrentState() != MTRState.State.REPLAYING) {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.not_playing", "Not currently playing a replay."));
@@ -531,11 +519,7 @@ public class MTRCommand {
         return 1;
     }
 
-    public static void clearChat(ServerPlayer player) {
-        player.sendSystemMessage(Component.literal("\n".repeat(20)));
-    }
-
-    private static int executeAutoReplay(CommandContext<CommandSourceStack> context, String direction, String unit, int delay, int steps) throws CommandSyntaxException {
+    private static int executeAutoReplay(CommandContext<CommandSourceStack> context, String direction, String unit, int delay, int steps) {
         if (MTRState.getCurrentState() != MTRState.State.REPLAYING) {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.not_playing", "Not currently playing a replay."));
             return 0;
@@ -546,8 +530,7 @@ public class MTRCommand {
             return 0;
         }
 
-        List<String> validUnits = List.of("ticks", "phase", "queue", "updates", "steps");
-        if (!validUnits.contains(unit.toLowerCase())) {
+        if (ReplayEngine.isUnitInvalid(unit)) {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.replay.unknown_unit", "Unknown unit: %s", unit));
             return 0;
         }
@@ -582,13 +565,13 @@ public class MTRCommand {
         return 1;
     }
 
-    private static int executeDumpStackTrace(CommandContext<CommandSourceStack> context, int step, int page) {
+    private static int executeDumpStackTrace(CommandContext<CommandSourceStack> context, int step) {
         ServerPlayer player = context.getSource().getPlayer();
-        if (player != null) {
-            StackTraceScreenGenerator.openStackTrace(player, step, page);
-        } else {
+        if (player == null) {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.player_only", "This command can only be executed by a player."));
+            return 0;
         }
+        StackTraceScreenGenerator.openStackTrace(player, step);
         return 1;
     }
 }

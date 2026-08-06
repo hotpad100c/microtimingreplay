@@ -16,6 +16,7 @@ public class MTREvents {
         MTREvent.register(MovingPistonTickEvent.TYPE, MovingPistonTickEvent::readNBT);
         MTREvent.register(EntitySpawnEvent.TYPE, EntitySpawnEvent::readNBT);
         MTREvent.register(EntityTickEvent.TYPE, EntityTickEvent::readNBT);
+        MTREvent.register(BlockEntityTickEvent.TYPE, BlockEntityTickEvent::readNBT);
         MTREvent.register(EntityMoveEvent.TYPE, EntityMoveEvent::readNBT);
     }
 

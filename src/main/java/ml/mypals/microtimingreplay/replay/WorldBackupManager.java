@@ -5,6 +5,7 @@ import net.minecraft.world.level.storage.ValueInput;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
+import ml.mypals.microtimingreplay.util.MTRBlockFlags;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -94,7 +95,7 @@ public class WorldBackupManager {
             
             areaTag.put("blocks", blocksTag);
 
-            // Backup non-player real entities in area
+            // Backup >>non-player<< real entities in area
             ListTag entitiesTag = new ListTag();
             for (Entity entity : level.getAllEntities()) {
                 if (entity instanceof Player) continue;
@@ -170,7 +171,7 @@ public class WorldBackupManager {
                     maxZ = Math.max(maxZ, z);
                 }
 
-                // Clear current non-player real entities in area before restoring
+                // Clear current >>non-player<< real entities in area before restoring
                 if (minX <= maxX) {
                     List<Entity> toRemove = new ArrayList<>();
                     for (Entity entity : level.getAllEntities()) {
@@ -200,9 +201,9 @@ public class WorldBackupManager {
                     
                     BlockPos pos = new BlockPos(x, y, z);
                     BlockState state = Block.stateById(stateId);
-                    
-                    level.setBlock(pos, state, 2 | 816, 0);
-                    
+
+                    level.setBlock(pos, state, MTRBlockFlags.SILENT_SET_BLOCK, MTRBlockFlags.SILENT_UPDATE_LIMIT);
+
                     if (blockTag.contains("nbt")) {
                         CompoundTag nbt = blockTag.getCompound("nbt").orElse(null);
                         if (nbt != null) {
@@ -214,7 +215,16 @@ public class WorldBackupManager {
                     }
                 }
 
+                // Restore the entities
+                ListTag entitiesTag = areaTag.getList("entities").orElse(new ListTag());
+                for (int j = 0; j < entitiesTag.size(); j++) {
+                    CompoundTag entityNbt = entitiesTag.getCompound(j).orElse(null);
+                    if (entityNbt == null || entityNbt.isEmpty()) continue;
 
+                    ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), entityNbt);
+                    Optional<Entity> loaded = EntityType.create(input, level, EntitySpawnReason.LOAD);
+                    loaded.ifPresent(level::addFreshEntity);
+                }
             }
         } catch (IOException e) {
             MicroTimingReplay.LOGGER.error("Failed to restore world for profile: {}", profile.getName(), e);

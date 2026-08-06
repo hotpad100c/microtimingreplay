@@ -1,7 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
 
-import ml.mypals.microtimingreplay.MTRGameRules;
+import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;

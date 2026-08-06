@@ -58,7 +58,7 @@ public class Vec3PosEvent extends MTREvent {
     }
     
     public void display(ServerLevel level) {
-        // Base implementation does nothing
+
     }
 
     @Override

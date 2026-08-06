@@ -30,7 +30,7 @@ public class StackTraceScreenGenerator {
 
     private static final int BODY_WIDTH = 370;
 
-    public static void openStackTrace(ServerPlayer player, int step, int page) {
+    public static void openStackTrace(ServerPlayer player, int step) {
         List<String> rawLines = StackTraceManager.get(step);
         if (rawLines == null || rawLines.isEmpty()) {
             player.sendSystemMessage(

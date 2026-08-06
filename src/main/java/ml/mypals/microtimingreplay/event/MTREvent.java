@@ -62,6 +62,10 @@ public abstract class MTREvent {
         return ChatFormatting.WHITE;
     }
 
+    public boolean isQueueScope() {
+        return false;
+    }
+
     public MutableComponent fillHoverText() {
         return Component.empty();
     }
@@ -91,7 +95,6 @@ public abstract class MTREvent {
     }
 
     public void apply(ServerLevel level, boolean forward) {
-        // Base implementation recursively applies children if any
         if (forward) {
             for (MTREvent child : children) {
                 child.apply(level, true);

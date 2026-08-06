@@ -3,7 +3,7 @@ package ml.mypals.microtimingreplay.replay;
 import ml.mypals.microtimingreplay.event.MovingPistonEvent;
 import ml.mypals.microtimingreplay.event.MovingPistonTickEvent;
 
-import ml.mypals.microtimingreplay.MTRGameRules;
+import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.*;
 import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
@@ -18,7 +18,6 @@ import ml.mypals.microtimingreplay.replay.scoreboard.VirtualScoreboardManager;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
@@ -33,6 +32,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.entity.Entity;
 import org.joml.Vector3f;
 
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
@@ -44,12 +44,20 @@ public class ReplayEngine {
         ENTER, LEAF, EXIT
     }
 
-    public record ReplayAction(TickFrame frame, MTREvent event, ActionType type, PhaseEvent phase, QueueEvent queue,
+
+    public record ReplayAction(TickFrame frame, MTREvent event, ActionType type, PhaseEvent phase, MTREvent queue,
             UpdateEvent update, int visibleStepIndex) {
     }
 
+    public static final List<String> STEP_UNITS = List.of("ticks", "phase", "queue", "updates", "steps");
+
+    public static boolean isUnitInvalid(String unit) {
+        return unit == null || !STEP_UNITS.contains(unit.toLowerCase(Locale.ROOT));
+    }
+
     private static MTRProfile currentProfile;
-    private static final Set<ServerPlayer> subscribers = new HashSet<>();
+
+    private static final Set<UUID> subscribers = new HashSet<>();
     private static ServerBossEvent bossBar;
 
     private static final List<ReplayAction> flatActions = new ArrayList<>();
@@ -81,11 +89,11 @@ public class ReplayEngine {
         updateBossBar();
     }
 
-    private static int flatten(TickFrame frame, MTREvent event, PhaseEvent p, QueueEvent q, UpdateEvent u, int stepCounter) {
+    private static int flatten(TickFrame frame, MTREvent event, PhaseEvent p, MTREvent q, UpdateEvent u, int stepCounter) {
         if (event instanceof PhaseEvent phase)
             p = phase;
-        else if (event instanceof QueueEvent queue)
-            q = queue;
+        else if (event.isQueueScope())
+            q = event;
         else if (event instanceof UpdateEvent update)
             u = update;
 
@@ -110,7 +118,7 @@ public class ReplayEngine {
     public static void stopReplay() {
         stopAutoReplay();
         if (bossBar != null) {
-            for (ServerPlayer player : subscribers) {
+            for (ServerPlayer player : onlineSubscribers()) {
                 VirtualScoreboardManager.removeScoreboard(player);
             }
             bossBar.removeAllPlayers();
@@ -137,8 +145,9 @@ public class ReplayEngine {
                 }
                 MarkerManager.clearAll(sl);
                 PistonDisplayManager.clearAll(sl);
-                EntityReplayManager.clearAll(null);
             }
+            // Level is set to null, it will clear every tracked replay entity at once.
+            EntityReplayManager.clearAll(null);
         }
     }
 
@@ -203,7 +212,8 @@ public class ReplayEngine {
     }
 
     public static void subscribe(ServerPlayer player) {
-        subscribers.add(player);
+        if (player == null) return;
+        subscribers.add(player.getUUID());
         if (bossBar != null) {
             bossBar.addPlayer(player);
             VirtualScoreboardManager.setupScoreboard(player);
@@ -212,11 +222,30 @@ public class ReplayEngine {
     }
 
     public static void unsubscribe(ServerPlayer player) {
-        subscribers.remove(player);
+        if (player == null) return;
+        subscribers.remove(player.getUUID());
         if (bossBar != null) {
             bossBar.removePlayer(player);
             VirtualScoreboardManager.removeScoreboard(player);
         }
+    }
+
+    public static boolean isSubscribed(ServerPlayer player) {
+        return player != null && subscribers.contains(player.getUUID());
+    }
+
+    private static List<ServerPlayer> onlineSubscribers() {
+        if (subscribers.isEmpty() || MicroTimingReplay.server == null)
+            return List.of();
+
+        List<ServerPlayer> online = new ArrayList<>(subscribers.size());
+        subscribers.removeIf(uuid -> {
+            ServerPlayer player = MicroTimingReplay.server.getPlayerList().getPlayer(uuid);
+            if (player == null) return true;
+            online.add(player);
+            return false;
+        });
+        return online;
     }
 
     private static void updateScoreboards() {
@@ -246,7 +275,7 @@ public class ReplayEngine {
         }
 
         List<TimelineGenerator.ScoreLine> lines = TimelineGenerator.generateTimeline(currentFrame, currentAction, stepMap);
-        for (ServerPlayer player : subscribers) {
+        for (ServerPlayer player : onlineSubscribers()) {
             VirtualScoreboardManager.updateLines(player, lines);
         }
     }
@@ -255,7 +284,9 @@ public class ReplayEngine {
         if (bossBar == null)
             return;
 
-        if (isEmpty) {
+        // A profile can hold frames that flattened to nothing; treat that as empty too
+        // so the progress calculation below never divides by zero.
+        if (isEmpty || flatActions.isEmpty()) {
             bossBar.setColor(BossEvent.BossBarColor.RED);
             bossBar.setName(MTRComponent.translatable(
                 "mtr.bossbar.title.empty",
@@ -291,6 +322,8 @@ public class ReplayEngine {
             switch (nearestParent) {
                 case UpdateEvent u -> extraDesc = Component.literal(" | ").append(MTRComponent.translatable("mtr.scoreboard.event.update." + u.getUpdateName(), u.getUpdateName()));
                 case QueueEvent q -> extraDesc = Component.literal(" | ").append(MTRComponent.translatable("mtr.scoreboard.event.queue." + q.getQueueName(), q.getQueueName()));
+                case BlockEntityTickEvent be -> extraDesc = Component.literal(" | ").append(MTRComponent.translatable("mtr.scoreboard.event.leaf.blockentitytick", "Block Entity Tick"));
+                case EntityTickEvent et -> extraDesc = Component.literal(" | ").append(MTRComponent.translatable("mtr.scoreboard.event.leaf.entitytick", "Entity Tick"));
                 case PhaseEvent p -> extraDesc = Component.literal(" | ").append(MTRComponent.translatable("mtr.scoreboard.event.phase." + p.getPhaseName(), p.getPhaseName()));
                 default -> {
                 }
@@ -521,7 +554,7 @@ public class ReplayEngine {
     }
 
     private static boolean shouldBreak(ServerLevel level, ReplayAction action, String unit, PhaseEvent targetPhase,
-            QueueEvent targetQueue, UpdateEvent targetUpdate) {
+            MTREvent targetQueue, UpdateEvent targetUpdate) {
         switch (unit) {
             case "updates" -> {
                 if (targetUpdate != null)
@@ -531,7 +564,7 @@ public class ReplayEngine {
             case "queue" -> {
                 if (targetQueue != null)
                     return action.queue != targetQueue;
-                return action.type == ActionType.ENTER && action.event instanceof QueueEvent;
+                return action.type == ActionType.ENTER && action.event.isQueueScope();
             }
             case "phase" -> {
                 if (targetPhase != null)
@@ -563,7 +596,7 @@ public class ReplayEngine {
         String[] parts = dim.split(":", 2);
         if (parts.length != 2) return defaultLevel;
         ResourceKey<Level> key = ResourceKey.create(
-                net.minecraft.core.registries.Registries.DIMENSION,
+                Registries.DIMENSION,
                 Identifier.fromNamespaceAndPath(parts[0], parts[1])
         );
         ServerLevel resolved = server.getLevel(key);
@@ -580,7 +613,7 @@ public class ReplayEngine {
         while (taken < amount && actionCursor < flatActions.size()) {
             ReplayAction startAction = flatActions.get(actionCursor);
             PhaseEvent targetPhase = startAction.phase;
-            QueueEvent targetQueue = startAction.queue;
+            MTREvent targetQueue = startAction.queue;
             UpdateEvent targetUpdate = startAction.update;
 
             while (true) {
@@ -631,7 +664,7 @@ public class ReplayEngine {
         while (taken < amount && actionCursor > 0) {
             ReplayAction startAction = flatActions.get(actionCursor - 1);
             PhaseEvent targetPhase = startAction.phase;
-            QueueEvent targetQueue = startAction.queue;
+            MTREvent targetQueue = startAction.queue;
             UpdateEvent targetUpdate = startAction.update;
 
             do {

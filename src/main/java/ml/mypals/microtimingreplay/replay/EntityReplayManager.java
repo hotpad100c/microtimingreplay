@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,14 +24,18 @@ public class EntityReplayManager {
     public static final String REPLAY_ENTITY_TAG = "mtr_replay_entity";
     public static final String REPLAY_ENTITY_NAME = "MTRReplayEntity";
 
-    /**
-     * Key: UUID of the original (recorded) entity.
-     * Value: the live replay Entity + which level it lives in.
-     */
     private record LeveledEntity(ServerLevel level, Entity entity) {
     }
 
     private static final Map<UUID, LeveledEntity> REPLAY_ENTITIES = new HashMap<>();
+
+    //Identifies a replay entity from both server and client
+    public static boolean isReplayEntity(Entity entity) {
+        if (entity == null)
+            return false;
+        Component name = entity.getCustomName();
+        return name != null && REPLAY_ENTITY_NAME.equals(name.getString());
+    }
 
     public static void registerEntity(ServerLevel level, UUID uuid, Entity entity) {
         if (uuid != null && entity != null) {
@@ -42,11 +47,7 @@ public class EntityReplayManager {
         }
     }
 
-    /**
-     * Returns the replay entity for the given UUID only if it lives in the given
-     * level.
-     * Falls back to searching the level directly if the cache is stale.
-     */
+
     public static Entity getEntity(ServerLevel level, UUID uuid) {
         if (uuid == null)
             return null;
@@ -68,10 +69,6 @@ public class EntityReplayManager {
         return null;
     }
 
-    /**
-     * Removes the replay entity for the given UUID only if it lives in the given
-     * level.
-     */
     public static void removeEntity(ServerLevel level, UUID uuid) {
         if (uuid == null)
             return;
@@ -146,7 +143,7 @@ public class EntityReplayManager {
     public static void syncEntityPosition(ServerLevel level, Entity entity) {
         if (level != null && entity != null && MicroTimingReplay.server != null) {
             entity.setOldPosAndRot();
-            entity.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            entity.setDeltaMovement(Vec3.ZERO);
             var teleportPacket = ClientboundTeleportEntityPacket.teleport(entity.getId(),
                     PositionMoveRotation.of(entity), Set.of(), entity.onGround());
             for (ServerPlayer player : MicroTimingReplay.server.getPlayerList().getPlayers()) {

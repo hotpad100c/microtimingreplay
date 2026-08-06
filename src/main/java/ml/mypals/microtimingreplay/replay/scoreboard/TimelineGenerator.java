@@ -83,7 +83,7 @@ public class TimelineGenerator {
                 case ENTER -> MTRComponent.translatable("mtr.scoreboard.status.entering", "← entering");
                 case LEAF -> MTRComponent.translatable("mtr.scoreboard.status.current", "← current");
                 case EXIT -> MTRComponent.translatable("mtr.scoreboard.status.done", "← done");
-            };*/
+            };*///Uhh..
             highlight = switch (currentAction.type()) {
                 case ENTER -> Component.literal("◀");
                 case LEAF -> Component.literal("←");

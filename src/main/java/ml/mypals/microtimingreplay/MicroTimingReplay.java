@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay;
 
 import ml.mypals.microtimingreplay.command.MTRCommand;
+import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.event.MTREvents;
 import ml.mypals.microtimingreplay.event.SelectionEventHandler;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
@@ -27,10 +28,6 @@ public class MicroTimingReplay implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
-
 		
 		ProfileManager.init();
 		WorldBackupManager.init();
@@ -40,6 +37,7 @@ public class MicroTimingReplay implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register(MTRCommand::register);
 		ServerLifecycleEvents.SERVER_STARTED.register(s -> MicroTimingReplay.server = s);
 		ServerLifecycleEvents.SERVER_STOPPING.register(MTRState::stoppingServer);
+		ServerLifecycleEvents.SERVER_STOPPED.register(s -> MicroTimingReplay.server = null);
 		ServerTickEvents.END_SERVER_TICK.register(MTRState::checkAutoStop);
 		SelectionEventHandler.register();
 	}
