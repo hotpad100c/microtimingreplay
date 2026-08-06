@@ -45,7 +45,7 @@ public abstract class ServerPhasesMixin {
     }
     @WrapMethod(method = "waitUntilNextTick")
     private void mtr$onTickAsyncTaskPhase(Operation<Void> original) {
-        if (MTRState.isRecording(this.overworld())) {
+        if (MTRState.isRecording(null)) {
             MTRState.pushEvent(new PhaseEvent(
                     this.tickCount - MTRState.getRecordStartTick(),
                     "AsyncTaskPhase"
@@ -57,6 +57,24 @@ public abstract class ServerPhasesMixin {
             }
         } else {
             original.call();
+        }
+    }
+
+    @WrapOperation(method = "tickChildren", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/server/MinecraftServer;tickConnection()V"))
+    private void mtr$onTickPlayerPhase(MinecraftServer instance, Operation<Void> original) {
+        if (MTRState.isRecording(null)) {
+            MTRState.pushEvent(new PhaseEvent(
+                    this.tickCount - MTRState.getRecordStartTick(),
+                    "PlayerTickPhase"
+            ));
+            try {
+                original.call(instance);
+            } finally {
+                MTRState.popEvent();
+            }
+        } else {
+            original.call(instance);
         }
     }
 }

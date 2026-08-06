@@ -10,6 +10,7 @@
     "LevelTicksMixin",
     "MovingPistonTickMixin",
     "NeighborUpdaterMixin",
+    "PlayerTickMixin",
     "ServerLevelPhasesMixin",
     "ServerLevelQueuesMixin",
     "ServerPhasesMixin",

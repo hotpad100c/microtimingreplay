@@ -73,7 +73,8 @@
 | 实体运算阶段 | `EntityTickPhase` | 遍历所有实体做 tick | `EntityTickList.forEach(...)` |
 | 方块实体阶段 | `BlockEntityPhase` | 遍历所有方块实体做 tick | `Level.tickBlockEntities()` |
 | 龙战 | `DragonFightPhase` | 末影龙战斗逻辑（仅末地） | `EnderDragonFight.tick()` |
-| 异步事件阶段 | `AsyncTaskPhase` | 服务端处理异步任务与网络包 | `MinecraftServer.waitUntilNextTick()` |
+| 玩家运算阶段 | `PlayerTickPhase` | 处理玩家连接与收到的数据包，玩家操作引发的方块变更在此 | `MinecraftServer.tickConnection()` |
+| 异步事件阶段 | `AsyncTaskPhase` | 服务端处理异步任务 | `MinecraftServer.waitUntilNextTick()` |
 
 > 阶段本身没有坐标，因此**不会在世界里生成标记方块**。
 
