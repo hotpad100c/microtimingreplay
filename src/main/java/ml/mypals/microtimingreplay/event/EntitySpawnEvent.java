@@ -1,6 +1,5 @@
 package ml.mypals.microtimingreplay.event;
 
-import net.minecraft.core.UUIDUtil;
 
 import ml.mypals.microtimingreplay.replay.EntityReplayManager;
 import ml.mypals.microtimingreplay.util.MTRComponent;
@@ -10,15 +9,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.phys.Vec3;
 
-import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.ValueInput;
-import java.util.Optional;
 import java.util.UUID;
 import org.joml.Vector3f;
 
@@ -101,26 +93,8 @@ public class EntitySpawnEvent extends Vec3PosEvent {
         boolean shouldSpawn = forward != despawn;
 
         if (shouldSpawn) {
-            if (EntityReplayManager.getEntity(level, uuid) == null && nbt != null) {
-                CompoundTag copyNbt = nbt.copy();
-                copyNbt.putIntArray("UUID", UUIDUtil.uuidToIntArray(uuid));
-
-                ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), copyNbt);
-                Optional<Entity> loaded = EntityType.create(input, level, EntitySpawnReason.LOAD);
-                if (loaded.isPresent()) {
-                    Entity entity = loaded.get();
-                    entity.absSnapTo(getX(), getY(), getZ(), yaw, pitch);
-                    entity.setDeltaMovement(Vec3.ZERO);
-                    entity.setNoGravity(true);
-                    entity.noPhysics = true;
-                    entity.setInvulnerable(true);
-                    if (entity instanceof Mob mob) {
-                        mob.setNoAi(true);
-                    }
-                    level.addFreshEntity(entity);
-                    EntityReplayManager.registerEntity(level, uuid, entity);
-                    EntityReplayManager.syncEntityPosition(level, entity);
-                }
+            if (EntityReplayManager.getEntity(level, uuid) == null) {
+                EntityReplayManager.spawnStandIn(level, uuid, nbt, getX(), getY(), getZ(), yaw, pitch);
             }
         } else {
             EntityReplayManager.removeEntity(level, uuid);

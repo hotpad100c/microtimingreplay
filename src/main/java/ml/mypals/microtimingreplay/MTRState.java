@@ -1,17 +1,10 @@
 package ml.mypals.microtimingreplay;
 
-import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
 import ml.mypals.microtimingreplay.replay.EntityReplayManager;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.storage.TagValueOutput;
 
 import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
+import ml.mypals.microtimingreplay.record.RecordingBossBar;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
 import ml.mypals.microtimingreplay.replay.ReplayEngine;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
@@ -74,10 +67,13 @@ public class MTRState {
         currentEventStack.clear();
 
         if (profile.getTicksRecorded() == 0) {
-            WorldBackupManager.backup(activeProfile, "record");
+            // Captures the whole starting population, players included (as mannequin
+            // stand-ins). Replay start restores it wholesale, so nothing that was
+            // already here needs a spawn event of its own.
+            WorldBackupManager.backup(activeProfile, "record", true);
         }
 
-        scanExistingEntities(server, profile);
+        RecordingBossBar.start(server, profile.getName(), advance);
 
         ServerTickRateManager manager = server.tickRateManager();
         manager.stepGameIfPaused(advance);
@@ -95,6 +91,7 @@ public class MTRState {
             activeProfile.setTicksRecorded((int) ticks);
             ProfileManager.saveProfile(activeProfile);
             StackTraceManager.collectAndSaveForProfile(activeProfile);
+            RecordingBossBar.stop();
             currentState = State.IDLE;
             activeProfile = null;
             recordTargetTick = -1;
@@ -111,8 +108,11 @@ public class MTRState {
                         currentEventStack.size());
                 currentEventStack.clear();
             }
-            if (recordTargetTick != -1 && server.getTickCount() >= recordTargetTick) {
-                stopRecording();
+            if (recordTargetTick != -1) {
+                RecordingBossBar.tick(server, recordTargetTick - server.getTickCount());
+                if (server.getTickCount() >= recordTargetTick) {
+                    stopRecording();
+                }
             }
         } else if (currentState == State.REPLAYING) {
             ReplayEngine.tickAutoReplay(server.overworld());
@@ -129,14 +129,16 @@ public class MTRState {
 
         currentState = State.REPLAYING;
         activeProfile = profile;
-        WorldBackupManager.backup(activeProfile, "replay");
-        WorldBackupManager.restore(activeProfile, "record");
+        WorldBackupManager.backup(activeProfile, "replay", false);
+        // Entities present before the first recorded tick come back here as inert
+        // stand-ins, so they need no spawn events of their own.
+        WorldBackupManager.restore(activeProfile, "record", true);
         return true;
     }
 
     public static void stopReplaying() {
         if (currentState == State.REPLAYING) {
-            WorldBackupManager.restore(activeProfile, "replay");
+            WorldBackupManager.restore(activeProfile, "replay", false);
             currentState = State.IDLE;
             activeProfile = null;
         }
@@ -186,41 +188,6 @@ public class MTRState {
         } else if (currentState == State.REPLAYING) {
             ReplayEngine.stopReplay();
             stopReplaying();
-        }
-    }
-
-    private static void scanExistingEntities(MinecraftServer server, MTRProfile profile) {
-        if (server == null || profile == null)
-            return;
-        for (ServerLevel level : server.getAllLevels()) {
-            String dim = level.dimension().identifier().toString();
-            for (Entity entity : level.getAllEntities()) {
-                if (entity instanceof Player)
-                    continue;
-                if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG))
-                    continue;
-
-                if (!profile.outsideAreaVec3(entity.position(), dim)) {
-                    long currentTick = server.getTickCount() - recordStartTick;
-                    ProblemReporter reporter = ProblemReporter.DISCARDING;
-                    TagValueOutput output = TagValueOutput.createWithContext(reporter, level.registryAccess());
-                    entity.saveWithoutId(output);
-                    CompoundTag nbt = output.buildResult();
-                    String entityTypeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
-                    nbt.putString("id", entityTypeKey);
-
-                    EntitySpawnEvent event = new EntitySpawnEvent(
-                            currentTick,
-                            entity.getUUID().toString(),
-                            entityTypeKey,
-                            nbt,
-                            entity.getX(), entity.getY(), entity.getZ(),
-                            entity.getYRot(), entity.getXRot(),
-                            false,dim);
-
-                    recordStep(event);
-                }
-            }
         }
     }
 }

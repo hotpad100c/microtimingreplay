@@ -6,9 +6,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.util.MTRBlockFlags;
+import ml.mypals.microtimingreplay.util.PlayerProxy;
 import ml.mypals.microtimingreplay.profile.WorldScopedStorage;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
@@ -23,14 +23,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.TagValueOutput;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class WorldBackupManager {
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -38,7 +36,7 @@ public class WorldBackupManager {
         WorldScopedStorage.initCategory("mtr_backups");
     }
 
-    public static void backup(MTRProfile profile, String suffix) {
+    public static void backup(MTRProfile profile, String suffix, boolean includePlayerStandIns) {
         if (MicroTimingReplay.server == null) return;
         
         CompoundTag rootTag = new CompoundTag();
@@ -94,7 +92,7 @@ public class WorldBackupManager {
             // Backup >>non-player<< real entities in area
             ListTag entitiesTag = new ListTag();
             for (Entity entity : level.getAllEntities()) {
-                if (entity instanceof Player) continue;
+                if (entity instanceof Player && !includePlayerStandIns) continue;
                 if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
 
                 double ex = entity.getX();
@@ -102,13 +100,9 @@ public class WorldBackupManager {
                 double ez = entity.getZ();
 
                 if (ex >= minX && ex <= maxX + 1 && ey >= minY && ey <= maxY + 1 && ez >= minZ && ez <= maxZ + 1) {
-                    ProblemReporter reporter = ProblemReporter.DISCARDING;
-                    TagValueOutput output = TagValueOutput.createWithContext(reporter, level.registryAccess());
-                    entity.saveWithoutId(output);
-                    CompoundTag entityNbt = output.buildResult();
-                    String entityTypeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
-                    entityNbt.putString("id", entityTypeKey);
-                    entitiesTag.add(entityNbt);
+                    // Players come out of this as mannequin NBT, so nothing that is
+                    // written here can ever be restored as a real player.
+                    entitiesTag.add(PlayerProxy.snapshotNbt(entity, level.registryAccess()));
                 }
             }
             areaTag.put("entities", entitiesTag);
@@ -126,7 +120,7 @@ public class WorldBackupManager {
         }
     }
 
-    public static void restore(MTRProfile profile, String suffix) {
+    public static void restore(MTRProfile profile, String suffix, boolean asStandIns) {
         if (MicroTimingReplay.server == null) return;
 
         Path path = WorldScopedStorage.getBackupFile(profile.getName(), suffix).toPath();
@@ -217,9 +211,13 @@ public class WorldBackupManager {
                     CompoundTag entityNbt = entitiesTag.getCompound(j).orElse(null);
                     if (entityNbt == null || entityNbt.isEmpty()) continue;
 
-                    ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), entityNbt);
-                    Optional<Entity> loaded = EntityType.create(input, level, EntitySpawnReason.LOAD);
-                    loaded.ifPresent(level::addFreshEntity);
+                    if (asStandIns) {
+                        EntityReplayManager.spawnStandInFromNbt(level, entityNbt);
+                    } else {
+                        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), entityNbt);
+                        EntityType.create(input, level, EntitySpawnReason.LOAD)
+                                .ifPresent(level::addFreshEntity);
+                    }
                 }
             }
         } catch (IOException e) {

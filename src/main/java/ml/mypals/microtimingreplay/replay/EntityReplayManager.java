@@ -9,7 +9,15 @@ import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
 import net.minecraft.world.entity.PositionMoveRotation;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.ValueInput;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -138,6 +146,65 @@ public class EntityReplayManager {
             for (Entity entity : levelEntities)
                 entity.discard();
         }
+    }
+
+    /**
+     * Spawns a replay stand-in at an explicit position, reusing the recorded UUID.
+     * Used by {@code EntitySpawnEvent} when the replay steps over a spawn.
+     */
+    public static Entity spawnStandIn(ServerLevel level, UUID uuid, CompoundTag nbt,
+                                      double x, double y, double z, float yaw, float pitch) {
+        if (level == null || uuid == null || nbt == null || nbt.isEmpty()) return null;
+
+        CompoundTag copy = nbt.copy();
+        copy.putIntArray("UUID", UUIDUtil.uuidToIntArray(uuid));
+
+        Entity entity = load(level, copy);
+        if (entity == null) return null;
+
+        entity.absSnapTo(x, y, z, yaw, pitch);
+        finishStandIn(level, uuid, entity);
+        return entity;
+    }
+
+    /**
+     * Spawns a replay stand-in from saved NBT that already carries its own position
+     * and UUID — the world backup taken when recording started.
+     * <p>
+     * These are the entities that were already in the area before the first tick, so
+     * they belong to the replay's starting state rather than to any recorded event.
+     */
+    public static Entity spawnStandInFromNbt(ServerLevel level, CompoundTag nbt) {
+        if (level == null || nbt == null || nbt.isEmpty()) return null;
+
+        Entity entity = load(level, nbt);
+        if (entity == null) return null;
+
+        finishStandIn(level, entity.getUUID(), entity);
+        return entity;
+    }
+
+    private static Entity load(ServerLevel level, CompoundTag nbt) {
+        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), nbt);
+        return EntityType.create(input, level, EntitySpawnReason.LOAD).orElse(null);
+    }
+
+    /**
+     * Inert on every axis: no gravity, no collision, no AI, invulnerable. Registering
+     * it also adds {@link #REPLAY_ENTITY_TAG}, which is what stops the server from
+     * ticking it at all — a stand-in must only ever move when the replay says so.
+     */
+    private static void finishStandIn(ServerLevel level, UUID uuid, Entity entity) {
+        entity.setDeltaMovement(Vec3.ZERO);
+        entity.setNoGravity(true);
+        entity.noPhysics = true;
+        entity.setInvulnerable(true);
+        if (entity instanceof Mob mob) {
+            mob.setNoAi(true);
+        }
+        level.addFreshEntity(entity);
+        registerEntity(level, uuid, entity);
+        syncEntityPosition(level, entity);
     }
 
     public static void syncEntityPosition(ServerLevel level, Entity entity) {

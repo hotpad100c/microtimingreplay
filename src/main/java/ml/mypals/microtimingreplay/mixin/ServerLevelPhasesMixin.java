@@ -35,6 +35,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.BooleanSupplier;
+import ml.mypals.microtimingreplay.util.PlayerProxy;
 
 @Mixin(ServerLevel.class)
 public abstract class ServerLevelPhasesMixin {
@@ -110,11 +111,6 @@ public abstract class ServerLevelPhasesMixin {
     }
     @WrapMethod(method = "tickNonPassenger")
     private void mtr$onTickEntity(Entity entity, Operation<Void> original) {
-        if (entity instanceof Player) {
-            original.call(entity);
-            return;
-        }
-
         if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
             return;
         }
@@ -131,34 +127,28 @@ public abstract class ServerLevelPhasesMixin {
                 boolean isInside = !profile.outsideAreaVec3(newPos, dim);
 
                 long currentTick = this.getServer().getTickCount() - MTRState.getRecordStartTick();
-                String uuid = entity.getUUID().toString();
-                String entityTypeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+                String uuid = PlayerProxy.replayUuid(entity).toString();
+                String entityTypeKey = PlayerProxy.typeKey(entity);
 
                 if (!wasInside && isInside) {
                     // Entity entered recorded area
-                    TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
-                    entity.saveWithoutId(output);
-                    CompoundTag nbt = output.buildResult();
-                    nbt.putString("id", entityTypeKey);
                     MTRState.recordStep(new EntitySpawnEvent(
-                        currentTick, uuid, entityTypeKey, nbt,
+                        currentTick, uuid, entityTypeKey,
+                        PlayerProxy.snapshotNbt(entity, level.registryAccess()),
                         entity.getX(), entity.getY(), entity.getZ(),
                         entity.getYRot(), entity.getXRot(), false,dim
                     ));
                 } else if (wasInside && !isInside) {
                     // Entity left recorded area
-                    TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, level.registryAccess());
-                    entity.saveWithoutId(output);
-                    CompoundTag nbt = output.buildResult();
-                    nbt.putString("id", entityTypeKey);
                     MTRState.recordStep(new EntitySpawnEvent(
-                        currentTick, uuid, entityTypeKey, nbt,
+                        currentTick, uuid, entityTypeKey,
+                        PlayerProxy.snapshotNbt(entity, level.registryAccess()),
                         entity.getX(), entity.getY(), entity.getZ(),
                         entity.getYRot(), entity.getXRot(), true,dim
                     ));
                 }
 
-                if (isInside) {
+                if (isInside && !(entity instanceof Player)) {
                     EntityTickEvent tickEvent = new EntityTickEvent(
                         currentTick, uuid, entityTypeKey,
                         entity.getX(), entity.getY(), entity.getZ(),dim

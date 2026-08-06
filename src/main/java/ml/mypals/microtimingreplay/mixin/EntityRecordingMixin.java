@@ -20,6 +20,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import ml.mypals.microtimingreplay.util.PlayerProxy;
 
 @Mixin(Entity.class)
 public abstract class EntityRecordingMixin {
@@ -27,7 +28,6 @@ public abstract class EntityRecordingMixin {
     @Inject(method = "onRemoval", at = @At("HEAD"))
     private void mtr$onEntityRemovedFromWorld(CallbackInfo ci) {
         Entity entity = (Entity) (Object) this;
-        if (entity instanceof Player) return;
         if (entity.level().isClientSide()) return;
         if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
 
@@ -37,19 +37,14 @@ public abstract class EntityRecordingMixin {
                 String dim = entity.level().dimension().identifier().toString();
                 if (!activeProfile.outsideAreaVec3(entity.position(), dim)) {
                     long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
-                    String entityTypeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
 
-
-                    TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, entity.level().registryAccess());
-                    entity.saveWithoutId(output);
-                    CompoundTag nbt = output.buildResult();
-                    nbt.putString("id", entityTypeKey);
-
+                    // Snapshot even though it is leaving: stepping backwards over this
+                    // event has to be able to rebuild it.
                     EntitySpawnEvent event = new EntitySpawnEvent(
                         currentTick,
-                        entity.getUUID().toString(),
-                        entityTypeKey,
-                        nbt,
+                        PlayerProxy.replayUuid(entity).toString(),
+                        PlayerProxy.typeKey(entity),
+                        PlayerProxy.snapshotNbt(entity, entity.level().registryAccess()),
                         entity.getX(), entity.getY(), entity.getZ(),
                         entity.getYRot(), entity.getXRot(),
                         true, // despawn
@@ -65,7 +60,7 @@ public abstract class EntityRecordingMixin {
     @WrapMethod(method = "move")
     private void mtr$onEntityMove(MoverType type, Vec3 vec, Operation<Void> original) {
         Entity entity = (Entity) (Object) this;
-        if (entity instanceof Player || entity.level().isClientSide() || entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
+        if (entity.level().isClientSide() || entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
             original.call(type, vec);
             return;
         }
@@ -83,8 +78,8 @@ public abstract class EntityRecordingMixin {
                 if (oldPos.distanceToSqr(newPos) > 1e-7) {
                     if (!activeProfile.outsideAreaVec3(oldPos, dim) || !activeProfile.outsideAreaVec3(newPos, dim)) {
                         long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
-                        String uuid = entity.getUUID().toString();
-                        String entityTypeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
+                        String uuid = PlayerProxy.replayUuid(entity).toString();
+                        String entityTypeKey = PlayerProxy.typeKey(entity);
                         Vec3 delta = entity.getDeltaMovement();
 
                         EntityMoveEvent moveEvent = new EntityMoveEvent(

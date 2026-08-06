@@ -11,6 +11,7 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import ml.mypals.microtimingreplay.util.PlayerProxy;
 
 @Mixin(ServerGamePacketListenerImpl.class)
 public abstract class PlayerTickMixin {
@@ -33,8 +34,8 @@ public abstract class PlayerTickMixin {
 
         MTRState.pushEvent(new EntityTickEvent(
                 level.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                this.player.getUUID().toString(),
-                BuiltInRegistries.ENTITY_TYPE.getKey(this.player.getType()).toString(),
+                PlayerProxy.replayUuid(this.player).toString(),
+                PlayerProxy.typeKey(this.player),
                 this.player.getX(), this.player.getY(), this.player.getZ(),
                 dim
         ));

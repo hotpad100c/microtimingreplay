@@ -28,6 +28,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import ml.mypals.microtimingreplay.util.PlayerProxy;
 
 @Mixin(ServerLevel.class)
 public abstract class ServerLevelQueuesMixin {
@@ -37,7 +38,6 @@ public abstract class ServerLevelQueuesMixin {
 
     @Inject(method = "addEntity", at = @At("HEAD"))
     private void mtr$onEntityAddedToWorld(Entity entity, CallbackInfoReturnable<Boolean> cir) {
-        if (entity instanceof Player) return;
         if (entity.level().isClientSide()) return;
         if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
 
@@ -47,17 +47,12 @@ public abstract class ServerLevelQueuesMixin {
                 String dim = entity.level().dimension().identifier().toString();
                 if (!activeProfile.outsideAreaVec3(entity.position(), dim)) {
                     long currentTick = this.getServer().getTickCount() - MTRState.getRecordStartTick();
-                    TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, entity.level().registryAccess());
-                    entity.saveWithoutId(output);
-                    CompoundTag nbt = output.buildResult();
-                    String entityTypeKey = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
-                    nbt.putString("id", entityTypeKey);
 
                     EntitySpawnEvent event = new EntitySpawnEvent(
                             currentTick,
-                            entity.getUUID().toString(),
-                            entityTypeKey,
-                            nbt,
+                            PlayerProxy.replayUuid(entity).toString(),
+                            PlayerProxy.typeKey(entity),
+                            PlayerProxy.snapshotNbt(entity, entity.level().registryAccess()),
                             entity.getX(), entity.getY(), entity.getZ(),
                             entity.getYRot(), entity.getXRot(),
                             false,
