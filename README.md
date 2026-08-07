@@ -248,7 +248,7 @@
 手动停止录制。
 
 ### `/mtr record clear <name>`
-清空该 profile 的所有帧数据、把 `ticksRecorded` 归零，并删除世界备份。区域配置保留。
+清空该 profile 的所有帧数据。区域配置保留。
 该 profile 正在录制或回放中时拒绝执行。
 
 ---
@@ -257,54 +257,49 @@
 
 ### `/mtr replay start <name>`
 
-1. 把**当前**区域内的世界状态备份为 `<name>_replay.dat`（用于结束回放时还原你的现场）。
-2. 用 `<name>_record.dat` 把区域还原到**录制开始时**的状态。
-3. 把事件树展平成线性动作序列，加载调用栈文件。
-4. 创建 BossBar 并自动让执行者订阅。
+把**当前**区域内的世界状态备份为 `<name>_replay.dat`（用于结束回放时还原你的现场）。 
+随后用 `<name>_record.dat` 把区域还原到**录制开始时**的状态。
 
 此时光标停在第 0 步，用下面的指令推进。
 
 ### `/mtr replay stop`
 还原 `_replay` 备份（把你的现场还回来），清除所有标记实体与回放实体，关闭所有订阅者的 BossBar 与侧边栏。
-可以由玩家、控制台或命令方块执行。
 
 ### `/mtr replay forward <unit> [amount]`
 ### `/mtr replay backward <unit> [amount]`
 
 按指定**单位**前进 / 后退。`amount` 省略时为 `1`。
 
-| unit | 含义 |
-|---|---|
-| `ticks` | 按**游戏刻**推进 `amount` 刻，执行这期间的所有事件 |
+| unit | 含义                                                                       |
+|---|--------------------------------------------------------------------------|
+| `ticks` | 按**游戏刻**推进 `amount` 刻，执行这期间的所有事件                                         |
 | `steps` | 推进 `amount` 个**可见步**（受 `step_ignore_updates` / `step_ignore_exiting` 影响） |
-| `phase` | 推进到**下一个阶段**（Phase）边界 |
-| `queue` | 推进到**下一个队列**边界。除了 Queue 事件本身（方块事件 / 计划刻 / 流体刻执行），**实体运算**与**方块实体运算**也按队列对待 |
-| `updates` | 推进到**下一个更新**（Update，如邻居更新 / 形状更新）边界 |
+| `phase` | 推进到**下一个阶段**（计划刻阶段 / 方块实体阶段...）边界                                           |
+| `queue` | 推进到**下一个队列**边界。（方块事件 / 计划刻 / 流体刻执行 / 实体运算 / 方块实体运算...）                   |
+| `updates` | 推进到**下一个更新**（邻居更新 / 形状更新）边界                                              |
 
 后退时会**逆向应用**每个事件（setBlock 还原成旧状态、实体生成还原成移除，等等）。
 
-> 拼错的 `unit` 会被拒绝并提示，不会误跑。请依赖 Tab 补全。
 
 ### `/mtr replay jump <step>`
-直接跳转到指定的 **step 编号**（时间轴界面里 `[#N↗]` 显示的那个数字）。向前或向后都可以，模组会自动逐个应用/回滚中间的事件。
+直接跳转到指定的 **step 编号**（时间轴界面里 `[#N↗]` 显示的那个数字）。
 
 ### `/mtr replay auto <direction> <unit> <delay> <steps>`
-自动步进：每隔 `<delay>` 个服务端刻，朝 `<direction>`（`forward` / `backward`）方向按 `<unit>` 走一步，共走 `<steps>` 步。
-走到头（某一步没能推进）会提前结束。
-
+自动步进：每隔 `<delay>` 个游戏刻，朝 `<direction>`（`forward` / `backward`）
+方向按 `<unit>` 走一步，共走 `<steps>` 步。
+> 结合flashback很好用！
+> 
 ### `/mtr replay auto stop`
 停止自动步进。
 
 ### `/mtr replay subscribe` / `unsubscribe`
 订阅 / 取消订阅回放的 **BossBar** 和**侧边栏时间轴**。
-BossBar 显示：`Replay [profile] Tick: 当前/总计 | Step: 当前/总计 | 当前所处的阶段/队列/更新`，颜色随当前事件类型变化。
-
 ---
 
 ## 时间轴界面与调用栈
 
 ### `/mtr replay screen [page]`
-打开**对话框（Dialog）形式的时间轴**，每页 40 条。每行包含：
+打开**Dialog形式的时间轴**，每页 40 条。每行包含：
 
 - `[TickN]` — 该事件所属的游戏刻，换刻处有分隔线
 - 缩进 + `▶`（进入一个父级作用域）或 `→`（叶子事件）
@@ -326,16 +321,16 @@ BossBar 显示：`Replay [profile] Tick: 当前/总计 | Step: 当前/总计 | �
 
 全部位于 `/gamerule` 的 **MISC** 分类下，均为布尔值。
 
-| 游戏规则 | 默认      | 作用                                                  |
-|---|---------|-----------------------------------------------------|
-| `microtimingreplay:skip_empty_phase` | `true`  | 录制时丢弃**没有产生任何子事件**的阶段节点                             |
-| `microtimingreplay:skip_empty_queue` | `true`  | 录制时丢弃**空的队列节点**                                     |
-| `microtimingreplay:skip_empty_update` | `true`  | 录制时丢弃**空的更新节点**（这类节点数量极多，建议保持开启）                    |
-| `microtimingreplay:skip_empty_entity_tick` | `false` | 录制时丢弃**没有产生任何子事件的实体运算**（若场景里有实体，建议关闭）               |
-| `microtimingreplay:skip_empty_block_entity_tick` | `true`  | 录制时丢弃**没有产生任何子事件的方块实体运算**                           |
-| `microtimingreplay:step_ignore_updates` | `true`  | `forward/backward steps` 时**跳过** Update 类节点，不把它算作一步 |
-| `microtimingreplay:step_ignore_exiting` | `true`  | `forward/backward steps` 时**跳过**"退出作用域"节点           |
-| `microtimingreplay:skip_delta_changes` | `true`  | 回放渲染时**只标记当前这一步**；关闭后会把本次跨越的所有位置一起标出来（做大跨度跳转时便于看全貌） |
+| 游戏规则 | 默认      | 作用                                                           |
+|---|---------|--------------------------------------------------------------|
+| `microtimingreplay:skip_empty_phase` | `true`  | 录制时丢弃**没有产生任何子事件**的阶段节点                                      |
+| `microtimingreplay:skip_empty_queue` | `true`  | 录制时丢弃**空的队列节点**                                              |
+| `microtimingreplay:skip_empty_update` | `true`  | 录制时丢弃**空的更新节点**（这类节点数量极多，建议保持开启）                             |
+| `microtimingreplay:skip_empty_entity_tick` | `false` | 录制时丢弃**没有产生任何子事件的实体运算**（若场景里有实体，建议关闭）                        |
+| `microtimingreplay:skip_empty_block_entity_tick` | `true`  | 录制时丢弃**没有产生任何子事件的方块实体运算**                                    |
+| `microtimingreplay:step_ignore_updates` | `true`  | `forward/backward steps` 时**跳过** 方块更新，不把它算作一步                |
+| `microtimingreplay:step_ignore_exiting` | `true`  | `forward/backward steps` 时**跳过**"退出作用域"事件                    |
+| `microtimingreplay:skip_delta_changes` | `true`  | 回放渲染时**只标记当前这一步**；关闭后会把本次跨越的所有位置一起标出来（做大跨度跳转时便于看全貌，但也会混乱...） |
 
 前五条（`skip_empty_*`）影响**录制产物的体积**，改动只对之后的录制生效。后三条只影响**回放时的手感与显示**，随时可改。
 
@@ -352,7 +347,7 @@ BossBar 显示：`Replay [profile] Tick: 当前/总计 | Step: 当前/总计 | �
 | `config/mtr_backups/<world-key>/<name>_replay.dat` | 当前存档中回放开始前的现场快照 |
 | `config/mtr_stacktrace/<world-key>/<name>.dat` | 当前存档中每个 step 对应的调用栈 |
 
-> 数据按存档自动隔离。`<world-key>` 由存档路径生成，名称带可读的存档目录名和短哈希；不同存档可安全使用同名 profile。旧版本的全局 profile 不会自动覆盖当前存档，请使用 `/mtr profile migrate <name>` 显式复制所需数据。
+> 数据按存档自动隔离。`<world-key>` 由存档路径生成，名称带可读的存档目录名和短哈希；不同存档可安全使用同名 profile。
 
 ---
 
@@ -369,4 +364,6 @@ BossBar 显示：`Replay [profile] Tick: 当前/总计 | Step: 当前/总计 | �
 
 ## 许可证
 
-见 [LICENSE](LICENSE)。
+MIT许可证
+
+[LICENSE](LICENSE)。
