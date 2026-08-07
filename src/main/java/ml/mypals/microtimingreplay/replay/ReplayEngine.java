@@ -708,23 +708,30 @@ public class ReplayEngine {
         return Math.abs(actionCursor - startCursor);
     }
 
+
     private static int tickForward(ServerLevel level, int ticks) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
-        long targetTick = currentVirtualTick + ticks;
-        long startTick = currentVirtualTick;
-        int takenActions = 0;
         int startCursor = actionCursor;
 
+        long targetTick = currentVirtualTick;
+        int crossed = 0;
+        for (int i = actionCursor; i < flatActions.size() && crossed < ticks; i++) {
+            long frameTick = flatActions.get(i).frame.getTick();
+            if (frameTick > targetTick) {
+                targetTick = frameTick;
+                crossed++;
+            }
+        }
+
+        int takenActions = 0;
         while (actionCursor < flatActions.size()) {
-            ReplayAction nextAction = flatActions.get(actionCursor);
-            if (nextAction.frame.getTick() > targetTick)
+            ReplayAction action = flatActions.get(actionCursor);
+            if (action.frame.getTick() > targetTick)
                 break;
 
-            ReplayAction action = flatActions.get(actionCursor);
             currentVirtualTick = action.frame.getTick();
-
             if (mutatesWorld(action)) {
                 action.event.applySelf(resolveLevel(level, action.event), true);
             }
@@ -738,27 +745,34 @@ public class ReplayEngine {
         updateScoreboards();
         if (takenActions > 0)
             level.getServer().tickRateManager().stepGameIfPaused(2);
-        return (int) (currentVirtualTick - startTick);
+        return crossed;
     }
 
     private static int tickBackward(ServerLevel level, int ticks) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
-        long targetTick = Math.max(0, currentVirtualTick - ticks);
-        long startTick = currentVirtualTick;
-        int takenActions = 0;
         int startCursor = actionCursor;
 
+        long targetTick = currentVirtualTick;
+        int crossed = 0;
+        for (int i = actionCursor - 1; i >= 0 && crossed < ticks; i--) {
+            long frameTick = flatActions.get(i).frame.getTick();
+            if (frameTick < targetTick) {
+                targetTick = frameTick;
+                crossed++;
+            }
+        }
+        boolean toStart = crossed == 0;
+
+        int takenActions = 0;
         while (actionCursor > 0) {
             ReplayAction prevAction = flatActions.get(actionCursor - 1);
-            if (prevAction.frame.getTick() < targetTick)
+            if (!toStart && prevAction.frame.getTick() <= targetTick)
                 break;
 
             actionCursor--;
             ReplayAction action = flatActions.get(actionCursor);
-            currentVirtualTick = action.frame.getTick();
-
             if (mutatesWorld(action)) {
                 action.event.applySelf(resolveLevel(level, action.event), false);
             }
@@ -766,11 +780,17 @@ public class ReplayEngine {
             takenActions++;
         }
 
+        if (actionCursor > 0) {
+            currentVirtualTick = flatActions.get(actionCursor - 1).frame.getTick();
+        } else if (!flatActions.isEmpty()) {
+            currentVirtualTick = flatActions.getFirst().frame.getTick();
+        }
+
         renderCurrentState(level, startCursor);
         updateBossBar();
         updateScoreboards();
         if (takenActions > 0)
             level.getServer().tickRateManager().stepGameIfPaused(2);
-        return (int) (startTick - currentVirtualTick);
+        return crossed;
     }
 }
