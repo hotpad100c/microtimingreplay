@@ -129,7 +129,7 @@
     "mtr.tooltip.piston.role_block": "被移动的方块",
     "mtr.tooltip.piston.spawn": "[生成]",
     "mtr.tooltip.piston.despawn": "[移除]",
-    "commands.mtr.replay.auto_started": "自动回放已开启：方向 %s，每 %d 游戏刻步进 1 个 %s，共 %d 步。",
+    "commands.mtr.replay.auto_started": "自动回放已开启：方向 %s，共 %d 步，每 %d 游戏刻步进 1 个 %s。",
     "commands.mtr.replay.auto_stopped": "自动回放已停止。",
     "commands.mtr.replay.auto_not_running": "当前没有正在运行的自动回放。",
     "mtr.tooltip.entity_spawn_title": "实体 %s @ [%.2f, %.2f, %.2f]",

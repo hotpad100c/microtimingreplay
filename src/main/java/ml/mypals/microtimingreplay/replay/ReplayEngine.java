@@ -196,9 +196,9 @@ public class ReplayEngine {
 
             int taken = 0;
             if ("forward".equalsIgnoreCase(activeAutoTask.direction)) {
-                taken = stepForward(level, 1, activeAutoTask.unit);
+                taken = advance(level, 1, activeAutoTask.unit, true);
             } else if ("backward".equalsIgnoreCase(activeAutoTask.direction)) {
-                taken = stepBackward(level, 1, activeAutoTask.unit);
+                taken = advance(level, 1, activeAutoTask.unit, false);
             }
 
             activeAutoTask.executedSteps++;
@@ -518,11 +518,6 @@ public class ReplayEngine {
         return false;
     }
 
-    /**
-     * Which actions carry a world effect. A scope event's write happens when it is
-     * entered — {@code setBlock} encloses the updates its own write triggers — so
-     * ENTER counts alongside LEAF. EXIT is bookkeeping only.
-     */
     private static boolean mutatesWorld(ReplayAction action) {
         return action.type == ActionType.LEAF || action.type == ActionType.ENTER;
     }
@@ -554,7 +549,17 @@ public class ReplayEngine {
         return resolved != null ? resolved : defaultLevel;
     }
 
-    public static int stepForward(ServerLevel level, int amount, String unit) {
+    public static int advance(ServerLevel level, int amount, String unit, boolean forward) {
+        String normalized = unit == null ? "" : unit.toLowerCase(Locale.ROOT);
+        if (normalized.equals("ticks")) {
+            return forward ? tickForward(level, amount) : tickBackward(level, amount);
+        }
+        return forward
+                ? stepForward(level, amount, normalized)
+                : stepBackward(level, amount, normalized);
+    }
+
+    private static int stepForward(ServerLevel level, int amount, String unit) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
@@ -605,7 +610,7 @@ public class ReplayEngine {
         return taken;
     }
 
-    public static int stepBackward(ServerLevel level, int amount, String unit) {
+    private static int stepBackward(ServerLevel level, int amount, String unit) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
@@ -703,7 +708,7 @@ public class ReplayEngine {
         return Math.abs(actionCursor - startCursor);
     }
 
-    public static int tickForward(ServerLevel level, int ticks) {
+    private static int tickForward(ServerLevel level, int ticks) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
@@ -736,7 +741,7 @@ public class ReplayEngine {
         return (int) (currentVirtualTick - startTick);
     }
 
-    public static int tickBackward(ServerLevel level, int ticks) {
+    private static int tickBackward(ServerLevel level, int ticks) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());

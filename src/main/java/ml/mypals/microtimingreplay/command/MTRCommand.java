@@ -478,14 +478,7 @@ public class MTRCommand {
             return 0;
         }
 
-        int taken = 0;
-        if (unit.equals("ticks")) {
-            taken = ReplayEngine.tickBackward(context.getSource().getLevel(), num);
-        } else {
-            taken = ReplayEngine.stepBackward(context.getSource().getLevel(), num, unit);
-        }
-        
-        int finalTaken = taken;
+        int finalTaken = ReplayEngine.advance(context.getSource().getLevel(), num, unit, false);
         sendReplayFeedback(context.getSource(), MTRComponent.translatable("commands.mtr.replay.stepped_backward_unit", "Replayed backward %d %s", finalTaken, unit));
         return 1;
     }
@@ -500,14 +493,7 @@ public class MTRCommand {
             return 0;
         }
 
-        int taken;
-        if (unit.equals("ticks")) {
-            taken = ReplayEngine.tickForward(context.getSource().getLevel(), num);
-        } else {
-            taken = ReplayEngine.stepForward(context.getSource().getLevel(), num, unit);
-        }
-        
-        int finalTaken = taken;
+        int finalTaken = ReplayEngine.advance(context.getSource().getLevel(), num, unit, true);
         sendReplayFeedback(context.getSource(), MTRComponent.translatable("commands.mtr.replay.stepped_forward_unit", "Replayed forward %d %s", finalTaken, unit));
         return 1;
     }
@@ -573,7 +559,7 @@ public class MTRCommand {
         sendReplayFeedback(context.getSource(), MTRComponent.translatable(
                 "commands.mtr.replay.auto_started",
                 "Auto replay started: %s %d step(s) with unit '%s' every %d tick(s).",
-                direction, steps, unit, delay
+                direction,steps , unit, delay
         ));
 
         return 1;
