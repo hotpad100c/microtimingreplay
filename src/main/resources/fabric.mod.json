@@ -3,7 +3,7 @@
 	"id": "microtimingreplay",
 	"version": "${version}",
 	"name": "MicroTimingReplay",
-	"description": "Record micro events in minecraft",
+	"description": "Record micro events and replay them!",
 	"authors": [
 		"Ryan100C"
 	],
@@ -12,7 +12,7 @@
 		"sources": "https://github.com/hotpad100c/MicroTimingReplay",
 		"issues": "https://github.com/hotpad100c/MicroTimingReplay/issues"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"icon": "assets/microtimingreplay/icon.png",
 	"environment": "*",
 	"entrypoints": {
