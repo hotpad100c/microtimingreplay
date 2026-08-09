@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.mixin;
 
 import ml.mypals.microtimingreplay.MTRState;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.AddBlockEventEvent;
 import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
 import ml.mypals.microtimingreplay.event.PostGameEventEvent;
@@ -42,6 +43,7 @@ public abstract class ServerLevelQueuesMixin {
         if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
 
         if (MTRState.isRecording(entity.level())) {
+            if (!RecordingFilterConfig.isEnabled("entity_spawn")) return;
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
                 String dim = entity.level().dimension().identifier().toString();
@@ -69,6 +71,7 @@ public abstract class ServerLevelQueuesMixin {
     private void mtr$onDoBlockEventHead(BlockEventData eventData, CallbackInfoReturnable<Boolean> cir) {
         ServerLevel level = (ServerLevel) (Object) this;
         if (MTRState.isRecording(level)) {
+            if (!RecordingFilterConfig.isEnabled("execute_block_event")) return;
             MTRProfile profile = MTRState.getActiveProfile();
             String dim = level.dimension().identifier().toString();
             if (profile != null && !profile.outsideArea(eventData.pos(), dim)) {
@@ -98,6 +101,7 @@ public abstract class ServerLevelQueuesMixin {
     private void mtr$onDoBlockTileTickHead(BlockPos pos, Block type, CallbackInfo ci) {
         ServerLevel level = (ServerLevel) (Object) this;
         if (MTRState.isRecording(level)) {
+            if (!RecordingFilterConfig.isEnabled("block_tick")) return;
             MTRProfile profile = MTRState.getActiveProfile();
             String dim = level.dimension().identifier().toString();
             if (profile != null && !profile.outsideArea(pos, dim)) {
@@ -127,6 +131,7 @@ public abstract class ServerLevelQueuesMixin {
     private void mtr$onDoFluidTileTickHead(BlockPos pos, Fluid type, CallbackInfo ci) {
         ServerLevel level = (ServerLevel) (Object) this;
         if (MTRState.isRecording(level)) {
+            if (!RecordingFilterConfig.isEnabled("fluid_tick")) return;
             MTRProfile profile = MTRState.getActiveProfile();
             String dim = level.dimension().identifier().toString();
             if (profile != null && !profile.outsideArea(pos, dim)) {
@@ -156,6 +161,7 @@ public abstract class ServerLevelQueuesMixin {
     public void mtr$onGameEvent(Holder<GameEvent> gameEvent, Vec3 position, GameEvent.Context context, CallbackInfo ci) {
         ServerLevel level = (ServerLevel) (Object) this;
         if (MTRState.isRecording(level)) {
+            if (!RecordingFilterConfig.isEnabled("post_game_event")) return;
             MTRProfile profile = MTRState.getActiveProfile();
             String dim = level.dimension().identifier().toString();
             if (profile != null && !profile.outsideAreaVec3(position, dim)) {
@@ -186,6 +192,7 @@ public abstract class ServerLevelQueuesMixin {
     private void mtr$onBlockEvent(BlockPos pos, Block block, int b0, int b1, CallbackInfo ci) {
         ServerLevel level = (ServerLevel) (Object) this;
         if (MTRState.isRecording(level)) {
+            if (!RecordingFilterConfig.isEnabled("add_block_event")) return;
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
                 String dim = level.dimension().identifier().toString();

@@ -1,4 +1,5 @@
 package ml.mypals.microtimingreplay.mixin;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -28,6 +29,10 @@ public abstract class ServerPhasesMixin {
             target = "Lnet/minecraft/server/level/ServerLevel;tick(Ljava/util/function/BooleanSupplier;)V"))
     private void mtr$onTickLevelPhase(ServerLevel level, BooleanSupplier hasTimeLeft, Operation<Void> original) {
         if (MTRState.isRecording(level)) {
+            if (!RecordingFilterConfig.isEnabled("phase_level_tick")) {
+                original.call(level, hasTimeLeft);
+                return;
+            }
             String dim = level.dimension().identifier().toString();
             MTRState.pushEvent(new LevelTickEvent(
                     this.tickCount - MTRState.getRecordStartTick(),
@@ -64,6 +69,10 @@ public abstract class ServerPhasesMixin {
             target = "Lnet/minecraft/server/MinecraftServer;tickConnection()V"))
     private void mtr$onTickPlayerPhase(MinecraftServer instance, Operation<Void> original) {
         if (MTRState.isRecording(null)) {
+            if (!RecordingFilterConfig.isEnabled("phase_player_tick")) {
+                original.call(instance);
+                return;
+            }
             MTRState.pushEvent(new PhaseEvent(
                     this.tickCount - MTRState.getRecordStartTick(),
                     "PlayerTickPhase"

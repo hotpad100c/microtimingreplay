@@ -2,6 +2,7 @@ package ml.mypals.microtimingreplay.mixin;
 
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.AddScheduleTickEvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -21,6 +22,7 @@ public class LevelTicksMixin {
     @Inject(method = "schedule", at = @At("HEAD"))
     private void mtr$onSchedule(ScheduledTick<?> tick, CallbackInfo ci) {
         if (MTRState.getCurrentState() == MTRState.State.RECORDING && MicroTimingReplay.server != null) {
+            if (!RecordingFilterConfig.isEnabled("add_schedule_tick")) return;
             String dimension = "";
             for (ServerLevel level : MicroTimingReplay.server.getAllLevels()) {
                 if (level.getBlockTicks() == (Object) this || level.getFluidTicks() == (Object) this) {

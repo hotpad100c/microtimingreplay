@@ -2,6 +2,7 @@ package ml.mypals.microtimingreplay.mixin;
 
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.MovingPistonEvent;
 import ml.mypals.microtimingreplay.event.MovingPistonTickEvent;
 import net.minecraft.core.BlockPos;
@@ -36,6 +37,7 @@ public class MovingPistonTickMixin {
                                                   PistonMovingBlockEntity entity, CallbackInfo ci) {
         if (level.isClientSide()) return;
         if (!MTRState.isRecording(level)) return;
+        if (!RecordingFilterConfig.isEnabled("moving_piston_tick")) return;
 
         float currentProgress = entity.getProgress(1.0f);
         float newProgress = Math.min(currentProgress + 0.5f, 1.0f);
@@ -66,6 +68,7 @@ public class MovingPistonTickMixin {
                                                 PistonMovingBlockEntity entity, CallbackInfo ci) {
         if (level.isClientSide()) return;
         if (!MTRState.isRecording(level)) return;
+        if (!RecordingFilterConfig.isEnabled("moving_piston_despawn")) return;
 
         long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
 
@@ -88,6 +91,7 @@ public class MovingPistonTickMixin {
         Level level = self.getLevel();
         if (level == null || level.isClientSide()) return;
         if (!MTRState.isRecording(level)) return;
+        if (!RecordingFilterConfig.isEnabled("moving_piston_despawn")) return;
         if (self.getProgress(1.0f) >= 1.0f) return;
 
         long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();

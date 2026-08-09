@@ -1,4 +1,6 @@
 package ml.mypals.microtimingreplay.replay;
+import ml.mypals.microtimingreplay.marker.PistonDisplayManager;
+import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
@@ -66,8 +68,8 @@ public final class ReplayManager {
         MTRState.endReplayWorld(profile);
         // Everything the session filed away under its id.
         EntityReplayManager.forgetSession(profileName);
-        ml.mypals.microtimingreplay.marker.PistonDisplayManager.forgetSession(profileName);
-        ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager.forgetSession(profileName);
+        PistonDisplayManager.forgetSession(profileName);
+        StackTraceManager.forgetSession(profileName);
         subscriptions.values().removeIf(profileName::equals);
     }
 

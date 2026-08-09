@@ -1,4 +1,5 @@
 package ml.mypals.microtimingreplay.command;
+import ml.mypals.microtimingreplay.config.RecordingEventRegistry;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -8,6 +9,8 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import ml.mypals.microtimingreplay.MTRState;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
+import ml.mypals.microtimingreplay.replay.dialog.EventFilterScreenGenerator;
 import ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
@@ -60,6 +63,12 @@ public class MTRCommand {
 
     public static final SuggestionProvider<CommandSourceStack> UNIT_SUGGESTION =
             (context, builder) -> SharedSuggestionProvider.suggest(ReplaySession.STEP_UNITS, builder);
+
+    public static final SuggestionProvider<CommandSourceStack> EVENT_FILTER_SUGGESTION =
+            (context, builder) -> SharedSuggestionProvider.suggest(
+                    RecordingEventRegistry.getAll()
+                            .stream().map(RecordingEventRegistry.EventEntry::id),
+                    builder);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment) {
         dispatcher.register(Commands.literal("mtr")
@@ -165,6 +174,37 @@ public class MTRCommand {
                                             IntegerArgumentType.getInteger(c, "delay"),
                                             IntegerArgumentType.getInteger(c, "steps")
                                     )))))))
+                .then(Commands.literal("filter")
+                    .executes(c -> openFilterScreen(c, 0))
+                    .then(Commands.literal("screen")
+                        .executes(c -> openFilterScreen(c, 0))
+                        .then(Commands.argument("page", IntegerArgumentType.integer(0))
+                            .executes(c -> openFilterScreen(c, IntegerArgumentType.getInteger(c, "page")))))
+                    .then(Commands.literal("toggle")
+                        .then(Commands.argument("eventId", StringArgumentType.word()).suggests(EVENT_FILTER_SUGGESTION)
+                            .executes(c -> toggleFilterEvent(c, StringArgumentType.getString(c, "eventId"), 0))
+                            .then(Commands.argument("page", IntegerArgumentType.integer(0))
+                                .executes(c -> toggleFilterEvent(c, StringArgumentType.getString(c, "eventId"), IntegerArgumentType.getInteger(c, "page"))))))
+                    .then(Commands.literal("reset")
+                        .executes(c -> resetFilterEvents(c, 0))
+                        .then(Commands.argument("page", IntegerArgumentType.integer(0))
+                            .executes(c -> resetFilterEvents(c, IntegerArgumentType.getInteger(c, "page"))))))
+            )
+            .then(Commands.literal("filter")
+                .executes(c -> openFilterScreen(c, 0))
+                .then(Commands.literal("screen")
+                    .executes(c -> openFilterScreen(c, 0))
+                    .then(Commands.argument("page", IntegerArgumentType.integer(0))
+                        .executes(c -> openFilterScreen(c, IntegerArgumentType.getInteger(c, "page")))))
+                .then(Commands.literal("toggle")
+                    .then(Commands.argument("eventId", StringArgumentType.word()).suggests(EVENT_FILTER_SUGGESTION)
+                        .executes(c -> toggleFilterEvent(c, StringArgumentType.getString(c, "eventId"), 0))
+                        .then(Commands.argument("page", IntegerArgumentType.integer(0))
+                            .executes(c -> toggleFilterEvent(c, StringArgumentType.getString(c, "eventId"), IntegerArgumentType.getInteger(c, "page"))))))
+                .then(Commands.literal("reset")
+                    .executes(c -> resetFilterEvents(c, 0))
+                    .then(Commands.argument("page", IntegerArgumentType.integer(0))
+                        .executes(c -> resetFilterEvents(c, IntegerArgumentType.getInteger(c, "page")))))
             )
         );
     }
@@ -575,6 +615,25 @@ public class MTRCommand {
         }
         TimelineScreenGenerator.openTimeline(player, session, page);
         return 1;
+    }
+
+    private static int openFilterScreen(CommandContext<CommandSourceStack> context, int page) {
+        if (!context.getSource().isPlayer()) return 0;
+        ServerPlayer player = context.getSource().getPlayer();
+        if (player != null) {
+            EventFilterScreenGenerator.openFilterScreen(player, page);
+        }
+        return 1;
+    }
+
+    private static int toggleFilterEvent(CommandContext<CommandSourceStack> context, String eventId, int page) {
+        RecordingFilterConfig.toggle(eventId);
+        return openFilterScreen(context, page);
+    }
+
+    private static int resetFilterEvents(CommandContext<CommandSourceStack> context, int page) {
+        RecordingFilterConfig.resetToDefaults();
+        return openFilterScreen(context, page);
     }
     private static int unsubscribeReplay(CommandContext<CommandSourceStack> context) {
         ServerPlayer player = context.getSource().getPlayer();

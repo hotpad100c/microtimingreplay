@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.mixin;
 
 import ml.mypals.microtimingreplay.MTRState;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.UpdateEvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import net.minecraft.core.BlockPos;
@@ -22,6 +23,7 @@ public interface NeighborUpdaterMixin {
     @Inject(method = "executeUpdate", at = @At("HEAD"))
     private static void mtr$onExecuteUpdateHead(Level level, BlockState state, BlockPos pos, Block changedBlock, Orientation orientation, boolean movedByPiston, CallbackInfo ci) {
         if (MTRState.isRecording(level)) {
+            if (!RecordingFilterConfig.isEnabled("neighbor_update")) return;
             MTRProfile profile = MTRState.getActiveProfile();
             String dim = level.dimension().identifier().toString();
             if (profile != null && !profile.outsideArea(pos, dim)) {
@@ -45,6 +47,7 @@ public interface NeighborUpdaterMixin {
     @Inject(method = "executeShapeUpdate", at = @At("HEAD"))
     private static void mtr$onExecuteShapeUpdateHead(LevelAccessor level, Direction direction, BlockPos pos, BlockPos neighborPos, BlockState neighborState, int updateFlags, int updateLimit, CallbackInfo ci) {
         if (level instanceof Level realLevel && MTRState.isRecording(realLevel)) {
+            if (!RecordingFilterConfig.isEnabled("shape_update")) return;
             MTRProfile profile = MTRState.getActiveProfile();
             String dim = realLevel.dimension().identifier().toString();
             if (profile != null && !profile.outsideArea(pos, dim)) {

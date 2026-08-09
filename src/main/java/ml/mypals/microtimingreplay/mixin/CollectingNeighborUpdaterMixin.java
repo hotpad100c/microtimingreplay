@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.mixin;
 
 import ml.mypals.microtimingreplay.MTRState;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.UpdateEvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import net.minecraft.core.BlockPos;
@@ -22,6 +23,7 @@ public class CollectingNeighborUpdaterMixin {
     @Inject(method = "shapeUpdate", at = @At("HEAD"))
     private void mtr$onShapeUpdateHead(Direction direction, BlockState neighborState, BlockPos pos, BlockPos neighborPos, int updateFlags, int updateLimit, CallbackInfo ci) {
         if (MTRState.isRecording(this.level)) {
+            if (!RecordingFilterConfig.isEnabled("shape_update")) return;
             MTRProfile profile = MTRState.getActiveProfile();
             String dim = this.level.dimension().identifier().toString();
             if (profile != null && !profile.outsideArea(pos, dim)) {

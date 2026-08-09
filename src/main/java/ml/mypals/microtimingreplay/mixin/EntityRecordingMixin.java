@@ -3,6 +3,7 @@ package ml.mypals.microtimingreplay.mixin;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import ml.mypals.microtimingreplay.MTRState;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.EntityMoveEvent;
 import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
@@ -32,6 +33,7 @@ public abstract class EntityRecordingMixin {
         if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
 
         if (MTRState.isRecording(entity.level())) {
+            if (!RecordingFilterConfig.isEnabled("entity_despawn")) return;
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
                 String dim = entity.level().dimension().identifier().toString();
@@ -66,6 +68,10 @@ public abstract class EntityRecordingMixin {
         }
 
         if (MTRState.isRecording(entity.level())) {
+            if (!RecordingFilterConfig.isEnabled("entity_move")) {
+                original.call(type, vec);
+                return;
+            }
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
                 String dim = entity.level().dimension().identifier().toString();

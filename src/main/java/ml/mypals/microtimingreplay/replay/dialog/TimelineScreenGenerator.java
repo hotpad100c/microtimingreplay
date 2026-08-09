@@ -193,6 +193,9 @@ public class TimelineScreenGenerator {
                     MTRComponent.translatable("mtr.timeline.btn_next", "Next ▶").withStyle(ChatFormatting.YELLOW),
                     "/mtr replay screen " + (page + 1), 150));
         }
+        navButtons.add(navBtn(
+                Component.literal("⚙ Filter").withStyle(ChatFormatting.LIGHT_PURPLE),
+                "/mtr filter screen 0", 150));
         navButtons.add(new ActionButton(
                 new CommonButtonData(MTRComponent.translatable("mtr.timeline.btn_close", "✕ Close").withStyle(ChatFormatting.GRAY),
                         Optional.empty(), 150),

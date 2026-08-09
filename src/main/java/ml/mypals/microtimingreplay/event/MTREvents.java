@@ -18,6 +18,7 @@ public class MTREvents {
         MTREvent.register(EntityTickEvent.TYPE, EntityTickEvent::readNBT);
         MTREvent.register(BlockEntityTickEvent.TYPE, BlockEntityTickEvent::readNBT);
         MTREvent.register(EntityMoveEvent.TYPE, EntityMoveEvent::readNBT);
+        MTREvent.register(ItemTransferEvent.TYPE, ItemTransferEvent::readNBT);
     }
 
     public static void init() {

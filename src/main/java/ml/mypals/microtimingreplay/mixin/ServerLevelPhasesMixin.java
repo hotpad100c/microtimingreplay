@@ -19,6 +19,7 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import ml.mypals.microtimingreplay.MTRState;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.PhaseEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -149,6 +150,10 @@ public abstract class ServerLevelPhasesMixin {
                 }
 
                 if (isInside && !(entity instanceof Player)) {
+                    if (!RecordingFilterConfig.isEnabled("entity_tick")) {
+                        original.call(entity);
+                        return;
+                    }
                     EntityTickEvent tickEvent = new EntityTickEvent(
                         currentTick, uuid, entityTypeKey,
                         entity.getX(), entity.getY(), entity.getZ(),dim

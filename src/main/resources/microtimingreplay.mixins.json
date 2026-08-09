@@ -6,6 +6,7 @@
     "CollectingNeighborUpdaterMixin",
     "EntityRecordingMixin",
     "GameEventDispatcherMixin",
+    "HopperTransferMixin",
     "LevelMixin",
     "LevelTicksMixin",
     "MovingPistonTickMixin",

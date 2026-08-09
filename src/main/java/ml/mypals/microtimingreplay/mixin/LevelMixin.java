@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.BlockEntityTickEvent;
 import ml.mypals.microtimingreplay.event.MovingPistonEvent;
 import ml.mypals.microtimingreplay.event.SetBlockEvent;
@@ -41,6 +42,9 @@ public abstract class LevelMixin implements ScheduledTickAccess {
     @WrapMethod(method = "setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;II)Z")
     private boolean mtr$onSetBlock(BlockPos pos, BlockState blockState, int updateFlags, int updateLimit, Operation<Boolean> original) {
         if (MTRState.isRecording((Level) (Object) this)) {
+            if (!RecordingFilterConfig.isEnabled("set_block")) {
+                return original.call(pos, blockState, updateFlags, updateLimit);
+            }
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
                 if (activeProfile.outsideArea(pos, this.dimension().identifier().toString())) {
@@ -76,6 +80,7 @@ public abstract class LevelMixin implements ScheduledTickAccess {
         if (isClientSide) return;
         if (!(blockEntity instanceof PistonMovingBlockEntity piston)) return;
         if (!MTRState.isRecording((Level) (Object) this)) return;
+        if (!RecordingFilterConfig.isEnabled("moving_piston_start")) return;
 
         long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
         MTRState.recordStep(new MovingPistonEvent(
@@ -94,7 +99,7 @@ public abstract class LevelMixin implements ScheduledTickAccess {
     @WrapOperation(method = "tickBlockEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/entity/TickingBlockEntity;tick()V"))
     private void mtr$onTickBlockEntity(TickingBlockEntity ticker, Operation<Void> original) {
         Level level = (Level) (Object) this;
-        if (!MTRState.isRecording(level)) {
+        if (!MTRState.isRecording(level) || !RecordingFilterConfig.isEnabled("block_entity_tick")) {
             original.call(ticker);
             return;
         }
