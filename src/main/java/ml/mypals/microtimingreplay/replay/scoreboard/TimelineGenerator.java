@@ -2,8 +2,7 @@ package ml.mypals.microtimingreplay.replay.scoreboard;
 
 import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.profile.TickFrame;
-import ml.mypals.microtimingreplay.replay.ReplayEngine.ReplayAction;
-import ml.mypals.microtimingreplay.util.MTRComponent;
+import ml.mypals.microtimingreplay.replay.ReplaySession.ReplayAction;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;

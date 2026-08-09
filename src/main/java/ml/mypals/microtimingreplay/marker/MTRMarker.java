@@ -2,6 +2,7 @@ package ml.mypals.microtimingreplay.marker;
 
 import com.mojang.math.Transformation;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
+import ml.mypals.microtimingreplay.replay.ReplayContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -23,6 +24,26 @@ public final class MTRMarker {
 
     private MTRMarker() {}
 
+    public static final String SESSION_TAG_PREFIX = "mtr_s_";
+
+    public static String sessionTag(String sessionId) {
+        return SESSION_TAG_PREFIX + sessionId;
+    }
+
+    /**
+     * Markers carry the tag of the session that spawned them. Each replay clears and
+     * redraws on every step, so without this one session's step would wipe another's
+     * markers.
+     */
+    private static void tagMarker(net.minecraft.world.entity.Entity entity) {
+        entity.addTag("mtr_marker");
+        entity.addTag("mtr_replay_marker");
+        String session = ReplayContext.current();
+        if (session != null) {
+            entity.addTag(sessionTag(session));
+        }
+    }
+
     public static void spawnTextDisplay(ServerLevel level, double x, double y, double z, Component text, float scale) {
         TextDisplay entity = new TextDisplay(EntityType.TEXT_DISPLAY, level);
         entity.setPos(x, y, z);
@@ -37,8 +58,7 @@ public final class MTRMarker {
         entity.setNoGravity(true);
         entity.setInvulnerable(true);
         entity.setSilent(true);
-        entity.addTag("mtr_marker");
-        entity.addTag("mtr_replay_marker");
+        tagMarker(entity);
 
         level.addFreshEntity(entity);
         entity.setText(text);
@@ -138,8 +158,7 @@ public final class MTRMarker {
         entity.setNoGravity(true);
         entity.setInvulnerable(true);
         entity.setSilent(true);
-        entity.addTag("mtr_marker");
-        entity.addTag("mtr_replay_marker");
+        tagMarker(entity);
         if (teamColor != null && teamColor.getColor() != null) {
             entity.setGlowingTag(true);
             entity.setGlowColorOverride(teamColor.getColor());

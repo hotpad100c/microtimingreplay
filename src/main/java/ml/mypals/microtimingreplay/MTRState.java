@@ -6,7 +6,7 @@ import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.record.RecordingBossBar;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
-import ml.mypals.microtimingreplay.replay.ReplayEngine;
+import ml.mypals.microtimingreplay.replay.ReplayManager;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
 import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import net.minecraft.server.MinecraftServer;
@@ -16,10 +16,13 @@ import net.minecraft.world.level.Level;
 import java.util.Stack;
 
 public class MTRState {
+    /**
+     *  Only recording is global mode now;
+     *  replays are tracked by {@code ReplayManager}.
+     **/
     public enum State {
         IDLE,
-        RECORDING,
-        REPLAYING
+        RECORDING
     }
 
     private static State currentState = State.IDLE;
@@ -53,7 +56,9 @@ public class MTRState {
     }
 
     public static boolean startRecording(String profileName, MinecraftServer server, int advance) {
-        if (currentState != State.IDLE) {
+        // Recording is exclusive, and it cannot share the world with a replay: both
+        // rewrite the same blocks.
+        if (currentState != State.IDLE || ReplayManager.isAnyRunning()) {
             return false;
         }
         MTRProfile profile = ProfileManager.loadProfile(profileName);
@@ -114,33 +119,30 @@ public class MTRState {
                     stopRecording();
                 }
             }
-        } else if (currentState == State.REPLAYING) {
-            ReplayEngine.tickAutoReplay(server.overworld());
         }
+        // Independent of recording: replays run on their own and there can be several.
+        ReplayManager.tickAll(server);
     }
 
-    public static boolean startReplaying(String profileName) {
-        if (currentState != State.IDLE) {
-            return false;
-        }
-        MTRProfile profile = ProfileManager.loadProfile(profileName);
-        if (profile == null)
-            return false;
+    /** Replays cannot start mid-recording — both rewrite the same blocks. */
+    public static boolean canStartReplay() {
+        return currentState != State.RECORDING;
+    }
 
-        currentState = State.REPLAYING;
-        activeProfile = profile;
-        WorldBackupManager.backup(activeProfile, "replay", false);
+    /**
+     * Puts one profile's area into the state its recording started from, saving the
+     * live scene first so {@link #endReplayWorld} can hand it back.
+     */
+    public static void beginReplayWorld(MTRProfile profile) {
+        WorldBackupManager.backup(profile, "replay", false);
         // Entities present before the first recorded tick come back here as inert
         // stand-ins, so they need no spawn events of their own.
-        WorldBackupManager.restore(activeProfile, "record", true);
-        return true;
+        WorldBackupManager.restore(profile, "record", true);
     }
 
-    public static void stopReplaying() {
-        if (currentState == State.REPLAYING) {
-            WorldBackupManager.restore(activeProfile, "replay", false);
-            currentState = State.IDLE;
-            activeProfile = null;
+    public static void endReplayWorld(MTRProfile profile) {
+        if (profile != null) {
+            WorldBackupManager.restore(profile, "replay", false);
         }
     }
 
@@ -185,9 +187,7 @@ public class MTRState {
     public static void stoppingServer(MinecraftServer server) {
         if (currentState == State.RECORDING) {
             stopRecording();
-        } else if (currentState == State.REPLAYING) {
-            ReplayEngine.stopReplay();
-            stopReplaying();
         }
+        ReplayManager.onServerStopping();
     }
 }

@@ -36,7 +36,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.*;
 
-public class ReplayEngine {
+public class ReplaySession {
 
     public enum ActionType {
         ENTER, LEAF, EXIT
@@ -53,20 +53,44 @@ public class ReplayEngine {
         return unit == null || !STEP_UNITS.contains(unit.toLowerCase(Locale.ROOT));
     }
 
-    private static MTRProfile currentProfile;
+    /**
+     * Session id, and the key every
+     * per-session manager files this
+     * replay's state under.
+     **/
+    private final String sessionId;
+    private MTRProfile currentProfile;
 
-    private static final Set<UUID> subscribers = new HashSet<>();
-    private static ServerBossEvent bossBar;
+    private final Set<UUID> subscribers = new HashSet<>();
+    private ServerBossEvent bossBar;
 
-    private static final List<ReplayAction> flatActions = new ArrayList<>();
-    private static int actionCursor = 0;
-    private static long totalTick = 0;
-    private static long currentVirtualTick = 0;
-    private static boolean isEmpty = false;
+    private final List<ReplayAction> flatActions = new ArrayList<>();
+    private int actionCursor = 0;
+    private long totalTick = 0;
+    private long currentVirtualTick = 0;
+    private boolean isEmpty = false;
 
 
-    public static void startReplay(MTRProfile profile, ServerLevel level) {
-        currentProfile = profile;
+    // One replay per profile, profile name doubles as the session id.
+    public ReplaySession(MTRProfile profile) {
+        this.sessionId = profile.getName();
+        this.currentProfile = profile;
+        ReplayContext.with(sessionId, () -> startReplayInSession(profile));
+    }
+
+    public String sessionId() {
+        return sessionId;
+    }
+
+    public MTRProfile getProfile() {
+        return currentProfile;
+    }
+
+    public boolean isRunning() {
+        return currentProfile != null;
+    }
+
+    private void startReplayInSession(MTRProfile profile) {
         flatActions.clear();
         actionCursor = 0;
         isEmpty = profile.getFrames().isEmpty();
@@ -87,7 +111,7 @@ public class ReplayEngine {
         updateBossBar();
     }
 
-    private static int flatten(TickFrame frame, MTREvent event, PhaseEvent p, MTREvent q, UpdateEvent u, int stepCounter) {
+    private int flatten(TickFrame frame, MTREvent event, PhaseEvent p, MTREvent q, UpdateEvent u, int stepCounter) {
         if (event instanceof PhaseEvent phase)
             p = phase;
         else if (event.isQueueScope())
@@ -113,7 +137,11 @@ public class ReplayEngine {
         return stepCounter;
     }
 
-    public static void stopReplay() {
+    public void stopReplay() {
+        ReplayContext.with(sessionId, () -> stopReplayInSession(sessionId));
+    }
+
+    private void stopReplayInSession(String sessionId) {
         stopAutoReplay();
         if (bossBar != null) {
             for (ServerPlayer player : onlineSubscribers()) {
@@ -141,7 +169,7 @@ public class ReplayEngine {
                 for (Entity entity : toDiscard) {
                     entity.discard();
                 }
-                MarkerManager.clearAll(sl);
+                MarkerManager.clearAll(sl, sessionId);
                 PistonDisplayManager.clearAll(sl);
             }
             // Level is set to null, it will clear every tracked replay entity at once.
@@ -149,11 +177,11 @@ public class ReplayEngine {
         }
     }
 
-    public static List<ReplayAction> getFlatActionsSnapshot() {
+    public List<ReplayAction> getFlatActionsSnapshot() {
         return List.copyOf(flatActions);
     }
 
-    public static int getActionCursor() {
+    public int getActionCursor() {
         return actionCursor;
     }
 
@@ -173,21 +201,21 @@ public class ReplayEngine {
         }
     }
 
-    private static AutoReplayTask activeAutoTask = null;
+    private AutoReplayTask activeAutoTask = null;
 
-    public static void startAutoReplay(String direction, String unit, int delayTicks, int totalSteps) {
+    public void startAutoReplay(String direction, String unit, int delayTicks, int totalSteps) {
         activeAutoTask = new AutoReplayTask(direction, unit, delayTicks, totalSteps);
     }
 
-    public static void stopAutoReplay() {
+    public void stopAutoReplay() {
         activeAutoTask = null;
     }
 
-    public static boolean isAutoReplayActive() {
+    public boolean isAutoReplayActive() {
         return activeAutoTask != null;
     }
 
-    public static void tickAutoReplay(ServerLevel level) {
+    public void tickAutoReplay(ServerLevel level) {
         if (activeAutoTask == null || currentProfile == null || level == null) return;
 
         activeAutoTask.tickCounter++;
@@ -209,7 +237,7 @@ public class ReplayEngine {
         }
     }
 
-    public static void subscribe(ServerPlayer player) {
+    public void subscribe(ServerPlayer player) {
         if (player == null) return;
         subscribers.add(player.getUUID());
         if (bossBar != null) {
@@ -219,7 +247,7 @@ public class ReplayEngine {
         }
     }
 
-    public static void unsubscribe(ServerPlayer player) {
+    public void unsubscribe(ServerPlayer player) {
         if (player == null) return;
         subscribers.remove(player.getUUID());
         if (bossBar != null) {
@@ -228,11 +256,11 @@ public class ReplayEngine {
         }
     }
 
-    public static boolean isSubscribed(ServerPlayer player) {
+    public boolean isSubscribed(ServerPlayer player) {
         return player != null && subscribers.contains(player.getUUID());
     }
 
-    private static List<ServerPlayer> onlineSubscribers() {
+    private List<ServerPlayer> onlineSubscribers() {
         if (subscribers.isEmpty() || MicroTimingReplay.server == null)
             return List.of();
 
@@ -246,7 +274,7 @@ public class ReplayEngine {
         return online;
     }
 
-    private static void updateScoreboards() {
+    private void updateScoreboards() {
         if (subscribers.isEmpty() || isEmpty)
             return;
 
@@ -278,7 +306,7 @@ public class ReplayEngine {
         }
     }
 
-    private static void updateBossBar() {
+    private void updateBossBar() {
         if (bossBar == null)
             return;
 
@@ -337,8 +365,8 @@ public class ReplayEngine {
         bossBar.setProgress((float) actionCursor / flatActions.size());
     }
 
-    private static void renderCurrentState(ServerLevel level, int startCursor) {
-        MarkerManager.clearAll(level);
+    private void renderCurrentState(ServerLevel level, int startCursor) {
+        MarkerManager.clearAll(level, sessionId);
 
         PistonDisplayManager.beginRenderPistons();
 
@@ -457,7 +485,7 @@ public class ReplayEngine {
                 Blocks.GRAY_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.GRAY);
     }
 
-    private static void renderLeafMarker(ServerLevel level, MTREvent event) {
+    private void renderLeafMarker(ServerLevel level, MTREvent event) {
         ServerLevel targetLevel = resolveLevel(level, event);
         if (event instanceof MovingPistonEvent || event instanceof MovingPistonTickEvent) {
             BlockPos pos = ((BlockPosEvent) event).getPos();
@@ -549,7 +577,11 @@ public class ReplayEngine {
         return resolved != null ? resolved : defaultLevel;
     }
 
-    public static int advance(ServerLevel level, int amount, String unit, boolean forward) {
+    public int advance(ServerLevel level, int amount, String unit, boolean forward) {
+        return ReplayContext.callInt(sessionId(), () -> advanceInSession(level, amount, unit, forward));
+    }
+
+    private int advanceInSession(ServerLevel level, int amount, String unit, boolean forward) {
         String normalized = unit == null ? "" : unit.toLowerCase(Locale.ROOT);
         if (normalized.equals("ticks")) {
             return forward ? tickForward(level, amount) : tickBackward(level, amount);
@@ -559,7 +591,7 @@ public class ReplayEngine {
                 : stepBackward(level, amount, normalized);
     }
 
-    private static int stepForward(ServerLevel level, int amount, String unit) {
+    private int stepForward(ServerLevel level, int amount, String unit) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
@@ -610,7 +642,7 @@ public class ReplayEngine {
         return taken;
     }
 
-    private static int stepBackward(ServerLevel level, int amount, String unit) {
+    private int stepBackward(ServerLevel level, int amount, String unit) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
@@ -659,7 +691,11 @@ public class ReplayEngine {
         return taken;
     }
 
-    public static int jumpToStep(ServerLevel level, int targetVisibleStep) {
+    public int jumpToStep(ServerLevel level, int targetVisibleStep) {
+        return ReplayContext.callInt(sessionId(), () -> jumpToStepInSession(level, targetVisibleStep));
+    }
+
+    private int jumpToStepInSession(ServerLevel level, int targetVisibleStep) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
@@ -709,7 +745,7 @@ public class ReplayEngine {
     }
 
 
-    private static int tickForward(ServerLevel level, int ticks) {
+    private int tickForward(ServerLevel level, int ticks) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());
@@ -748,7 +784,7 @@ public class ReplayEngine {
         return crossed;
     }
 
-    private static int tickBackward(ServerLevel level, int ticks) {
+    private int tickBackward(ServerLevel level, int ticks) {
         if (currentProfile == null)
             return 0;
         actionCursor = Math.clamp(actionCursor, 0, flatActions.size());

@@ -35,7 +35,16 @@ public class EntityReplayManager {
     private record LeveledEntity(ServerLevel level, Entity entity) {
     }
 
-    private static final Map<UUID, LeveledEntity> REPLAY_ENTITIES = new HashMap<>();
+
+    private static final Map<String, Map<UUID, LeveledEntity>> BY_SESSION = new HashMap<>();
+
+    private static Map<UUID, LeveledEntity> entities() {
+        return BY_SESSION.computeIfAbsent(ReplayContext.key(), k -> new HashMap<>());
+    }
+
+    public static void forgetSession(String sessionId) {
+        BY_SESSION.remove(sessionId == null ? "" : sessionId);
+    }
 
     //Identifies a replay entity from both server and client
     public static boolean isReplayEntity(Entity entity) {
@@ -51,7 +60,7 @@ public class EntityReplayManager {
             entity.addTag("mtr_replay_marker");
             entity.setCustomName(Component.literal(REPLAY_ENTITY_NAME));
             entity.setCustomNameVisible(false);
-            REPLAY_ENTITIES.put(uuid, new LeveledEntity(level, entity));
+            entities().put(uuid, new LeveledEntity(level, entity));
         }
     }
 
@@ -59,7 +68,7 @@ public class EntityReplayManager {
     public static Entity getEntity(ServerLevel level, UUID uuid) {
         if (uuid == null)
             return null;
-        LeveledEntity cached = REPLAY_ENTITIES.get(uuid);
+        LeveledEntity cached = entities().get(uuid);
         if (cached != null) {
             if (cached.level() == level || level == null) {
                 Entity e = cached.entity();
@@ -70,7 +79,7 @@ public class EntityReplayManager {
         if (level != null) {
             Entity found = level.getEntity(uuid);
             if (found != null && !found.isRemoved()) {
-                REPLAY_ENTITIES.put(uuid, new LeveledEntity(level, found));
+                entities().put(uuid, new LeveledEntity(level, found));
                 return found;
             }
         }
@@ -80,12 +89,12 @@ public class EntityReplayManager {
     public static void removeEntity(ServerLevel level, UUID uuid) {
         if (uuid == null)
             return;
-        LeveledEntity cached = REPLAY_ENTITIES.get(uuid);
+        LeveledEntity cached = entities().get(uuid);
         if (cached != null) {
             if (level != null && cached.level() != level) {
                 return;
             }
-            REPLAY_ENTITIES.remove(uuid);
+            entities().remove(uuid);
             Entity entity = cached.entity();
             if (entity != null && !entity.isRemoved()) {
                 entity.discard();
@@ -101,7 +110,7 @@ public class EntityReplayManager {
     }
 
     public static void clearGlows(ServerLevel level) {
-        for (LeveledEntity le : REPLAY_ENTITIES.values()) {
+        for (LeveledEntity le : entities().values()) {
             if (le == null)
                 continue;
             if (level != null && le.level() != level)
@@ -115,16 +124,16 @@ public class EntityReplayManager {
 
     public static void clearAll(ServerLevel level) {
         if (level == null) {
-            List<LeveledEntity> toRemove = new ArrayList<>(REPLAY_ENTITIES.values());
+            List<LeveledEntity> toRemove = new ArrayList<>(entities().values());
             for (LeveledEntity le : toRemove) {
                 if (le != null && le.entity() != null && !le.entity().isRemoved()) {
                     le.entity().discard();
                 }
             }
-            REPLAY_ENTITIES.clear();
+            entities().clear();
         } else {
             List<UUID> toRemove = new ArrayList<>();
-            for (Map.Entry<UUID, LeveledEntity> entry : REPLAY_ENTITIES.entrySet()) {
+            for (Map.Entry<UUID, LeveledEntity> entry : entities().entrySet()) {
                 LeveledEntity le = entry.getValue();
                 if (le != null && le.level() == level) {
                     if (le.entity() != null && !le.entity().isRemoved()) {
@@ -134,7 +143,7 @@ public class EntityReplayManager {
                 }
             }
             for (UUID id : toRemove)
-                REPLAY_ENTITIES.remove(id);
+                entities().remove(id);
 
             List<Entity> levelEntities = new ArrayList<>();
             for (Entity entity : level.getAllEntities()) {

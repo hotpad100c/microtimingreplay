@@ -5,6 +5,7 @@ import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.event.MTREvents;
 import ml.mypals.microtimingreplay.event.SelectionEventHandler;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
+import ml.mypals.microtimingreplay.profile.WorldScopedStorage;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -35,7 +36,7 @@ public class MicroTimingReplay implements ModInitializer {
 		MTRGameRules.init();
 
 		CommandRegistrationCallback.EVENT.register(MTRCommand::register);
-		ServerLifecycleEvents.SERVER_STARTED.register(s -> MicroTimingReplay.server = s);
+		ServerLifecycleEvents.SERVER_STARTED.register(s -> {MicroTimingReplay.server = s;WorldScopedStorage.migrateCategoryLayout();});
 		ServerLifecycleEvents.SERVER_STOPPING.register(MTRState::stoppingServer);
 		ServerLifecycleEvents.SERVER_STOPPED.register(_ -> MicroTimingReplay.server = null);
 		ServerTickEvents.END_SERVER_TICK.register(MTRState::checkAutoStop);

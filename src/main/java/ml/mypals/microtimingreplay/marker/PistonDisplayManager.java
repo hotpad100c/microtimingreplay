@@ -17,16 +17,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import ml.mypals.microtimingreplay.replay.ReplayContext;
 
 public class PistonDisplayManager {
 
-    private static final Map<BlockPos, List<UUID>> pistonDisplays = new HashMap<>();
-    private static final Map<BlockPos, List<UUID>> stagedOldPistonDisplays = new HashMap<>();
+    private static final Map<String, Map<BlockPos, List<UUID>>> displaysBySession = new HashMap<>();
+    private static final Map<String, Map<BlockPos, List<UUID>>> stagedBySession = new HashMap<>();
+
+    private static Map<BlockPos, List<UUID>> pistonDisplays() {
+        return displaysBySession.computeIfAbsent(ReplayContext.key(), k -> new HashMap<>());
+    }
+
+    private static Map<BlockPos, List<UUID>> stagedOldPistonDisplays() {
+        return stagedBySession.computeIfAbsent(ReplayContext.key(), k -> new HashMap<>());
+    }
+
+    // Drops everything a session owned
+    public static void forgetSession(String sessionId) {
+        String key = sessionId == null ? "" : sessionId;
+        displaysBySession.remove(key);
+        stagedBySession.remove(key);
+    }
 
     public static void beginRenderPistons() {
-        stagedOldPistonDisplays.clear();
-        stagedOldPistonDisplays.putAll(pistonDisplays);
-        pistonDisplays.clear();
+        stagedOldPistonDisplays().clear();
+        stagedOldPistonDisplays().putAll(pistonDisplays());
+        pistonDisplays().clear();
     }
 
     private static Entity findEntityInAllLevels(ServerLevel defaultLevel, UUID uuid) {
@@ -42,7 +58,7 @@ public class PistonDisplayManager {
 
     public static void endRenderPistons(ServerLevel level) {
         List<Entity> toDiscard = new ArrayList<>();
-        for (List<UUID> uuids : stagedOldPistonDisplays.values()) {
+        for (List<UUID> uuids : stagedOldPistonDisplays().values()) {
             for (UUID uuid : uuids) {
                 Entity entity = findEntityInAllLevels(level, uuid);
                 if (entity != null) toDiscard.add(entity);
@@ -51,12 +67,12 @@ public class PistonDisplayManager {
         for (Entity e : toDiscard) {
             e.discard();
         }
-        stagedOldPistonDisplays.clear();
+        stagedOldPistonDisplays().clear();
     }
 
     public static void clearAll(ServerLevel level) {
         List<Entity> toDiscard = new ArrayList<>();
-        for (List<UUID> uuids : pistonDisplays.values()) {
+        for (List<UUID> uuids : pistonDisplays().values()) {
             for (UUID uuid : uuids) {
                 Entity entity = findEntityInAllLevels(level, uuid);
                 if (entity != null) toDiscard.add(entity);
@@ -65,12 +81,12 @@ public class PistonDisplayManager {
         for (Entity e : toDiscard) {
             e.discard();
         }
-        pistonDisplays.clear();
-        stagedOldPistonDisplays.clear();
+        pistonDisplays().clear();
+        stagedOldPistonDisplays().clear();
     }
 
     public static void clearGlows(ServerLevel level) {
-        for (List<UUID> uuids : pistonDisplays.values()) {
+        for (List<UUID> uuids : pistonDisplays().values()) {
             for (UUID uuid : uuids) {
                 Entity entity = findEntityInAllLevels(level, uuid);
                 if (entity != null) entity.setGlowingTag(false);
@@ -79,17 +95,17 @@ public class PistonDisplayManager {
     }
 
     public static List<UUID> claimOldPistonDisplay(BlockPos pos) {
-        return stagedOldPistonDisplays.remove(pos);
+        return stagedOldPistonDisplays().remove(pos);
     }
 
     public static void registerPistonDisplays(BlockPos pos, List<UUID> uuids) {
-        pistonDisplays.put(pos, new ArrayList<>(uuids));
+        pistonDisplays().put(pos, new ArrayList<>(uuids));
     }
 
     public static void removePistonDisplays(BlockPos pos, ServerLevel level) {
-        List<UUID> uuids = pistonDisplays.remove(pos);
+        List<UUID> uuids = pistonDisplays().remove(pos);
         if (uuids == null) {
-            uuids = stagedOldPistonDisplays.remove(pos);
+            uuids = stagedOldPistonDisplays().remove(pos);
         }
         if (uuids == null) return;
         for (UUID uuid : uuids) {
@@ -99,7 +115,7 @@ public class PistonDisplayManager {
     }
 
     public static List<UUID> getPistonDisplayUUIDs(BlockPos pos) {
-        return pistonDisplays.get(pos);
+        return pistonDisplays().get(pos);
     }
 
     public static UUID spawnStaticBlockDisplay(ServerLevel level, BlockPos blockPos, BlockState state, float xOff, float yOff, float zOff) {

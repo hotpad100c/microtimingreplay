@@ -1,8 +1,6 @@
 package ml.mypals.microtimingreplay.profile;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
-import ml.mypals.microtimingreplay.replay.WorldBackupManager;
-import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
@@ -10,7 +8,6 @@ import net.minecraft.nbt.NbtIo;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,9 +17,7 @@ public class ProfileManager {
 
     private static final Map<String, AreaNameCache> AREA_NAME_CACHE = new HashMap<>();
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void init() {
-        WorldScopedStorage.initCategory("mtr_profiles");
     }
 
     public static MTRProfile createProfile(String name) {
@@ -81,45 +76,23 @@ public class ProfileManager {
     }
 
     public static boolean deleteProfile(String name) {
-        File file = WorldScopedStorage.getProfileFile(name);
-        boolean deleted = file.exists() && file.delete();
+        boolean deleted = WorldScopedStorage.deleteProfile(name);
         if (deleted) {
             AREA_NAME_CACHE.remove(name);
-            WorldBackupManager.deleteBackups(name);
-            StackTraceManager.deleteForProfile(name);
         }
         return deleted;
     }
 
     public static boolean hasProfile(String name) {
-        File file = WorldScopedStorage.getProfileFile(name);
-        return file.exists();
+        return WorldScopedStorage.hasProfile(name);
     }
 
     public static List<String> listProfiles() {
-        List<String> profiles = new ArrayList<>();
-        File[] files = WorldScopedStorage.getWorldDir("mtr_profiles").listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.getName().endsWith(".dat")) {
-                    profiles.add(file.getName().substring(0, file.getName().length() - 4));
-                }
-            }
-        }
-        return profiles;
+        return WorldScopedStorage.listProfileNames();
     }
 
     public static List<String> listLegacyProfiles() {
-        List<String> profiles = new ArrayList<>();
-        File[] files = WorldScopedStorage.getCategoryDir("mtr_profiles").listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isFile() && file.getName().endsWith(".dat")) {
-                    profiles.add(file.getName().substring(0, file.getName().length() - 4));
-                }
-            }
-        }
-        return profiles;
+        return WorldScopedStorage.listLegacyProfileNames();
     }
 
     public static boolean migrateLegacyProfile(String name) {

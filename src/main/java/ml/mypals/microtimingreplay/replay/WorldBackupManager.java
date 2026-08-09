@@ -31,9 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class WorldBackupManager {
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void init() {
-        WorldScopedStorage.initCategory("mtr_backups");
+        // Backups live in the profile's own directory; nothing to lay out up front.
     }
 
     public static void backup(MTRProfile profile, String suffix, boolean includePlayerStandIns) {

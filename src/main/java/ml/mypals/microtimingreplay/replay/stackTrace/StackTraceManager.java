@@ -3,6 +3,7 @@ package ml.mypals.microtimingreplay.replay.stackTrace;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
+import ml.mypals.microtimingreplay.replay.ReplayContext;
 import ml.mypals.microtimingreplay.profile.TickFrame;
 import ml.mypals.microtimingreplay.profile.WorldScopedStorage;
 import net.minecraft.nbt.CompoundTag;
@@ -21,31 +22,40 @@ import java.util.Map;
 
 public class StackTraceManager {
 
-    private static final Map<Integer, List<String>> STACK_TRACES = new HashMap<>();
+
+    private static final Map<String, Map<Integer, List<String>>> BY_SESSION = new HashMap<>();
+
+    private static Map<Integer, List<String>> traces() {
+        return BY_SESSION.computeIfAbsent(ReplayContext.key(), k -> new HashMap<>());
+    }
+
+    public static void forgetSession(String sessionId) {
+        BY_SESSION.remove(sessionId == null ? "" : sessionId);
+    }
 
     public static void clear() {
-        STACK_TRACES.clear();
+        traces().clear();
     }
 
     public static void record(int stepIndex, List<String> stackTrace) {
         if (stackTrace != null && !stackTrace.isEmpty()) {
-            STACK_TRACES.put(stepIndex, new ArrayList<>(stackTrace));
+            traces().put(stepIndex, new ArrayList<>(stackTrace));
         }
     }
 
     public static List<String> get(int stepIndex) {
-        return STACK_TRACES.get(stepIndex);
+        return traces().get(stepIndex);
     }
 
     public static Map<Integer, List<String>> getAll() {
-        return STACK_TRACES;
+        return traces();
     }
 
     public static CompoundTag writeNBT() {
         CompoundTag root = new CompoundTag();
         ListTag stepsList = new ListTag();
 
-        for (Map.Entry<Integer, List<String>> entry : STACK_TRACES.entrySet()) {
+        for (Map.Entry<Integer, List<String>> entry : traces().entrySet()) {
             CompoundTag stepTag = new CompoundTag();
             stepTag.putInt("step", entry.getKey());
 
@@ -62,7 +72,7 @@ public class StackTraceManager {
     }
 
     public static void readNBT(CompoundTag root) {
-        STACK_TRACES.clear();
+        traces().clear();
         if (root == null || !root.contains("steps")) return;
 
         ListTag stepsList = root.getList("steps").orElse(new ListTag());
@@ -75,7 +85,7 @@ public class StackTraceManager {
                 for (int j = 0; j < linesTag.size(); j++) {
                     linesTag.getString(j).ifPresent(lines::add);
                 }
-                STACK_TRACES.put(step, lines);
+                traces().put(step, lines);
             }
         }
     }
@@ -94,7 +104,7 @@ public class StackTraceManager {
     }
 
     public static void loadFromFile(File file) {
-        STACK_TRACES.clear();
+        traces().clear();
         if (file == null || !file.exists()) return;
         try {
             CompoundTag tag = NbtIo.readCompressed(file.toPath(), NbtAccounter.unlimitedHeap());

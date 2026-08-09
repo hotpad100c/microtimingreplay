@@ -3,7 +3,7 @@ package ml.mypals.microtimingreplay.replay.dialog;
 import net.minecraft.server.dialog.body.DialogBody;
 
 import ml.mypals.microtimingreplay.event.*;
-import ml.mypals.microtimingreplay.replay.ReplayEngine;
+import ml.mypals.microtimingreplay.replay.ReplaySession;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -60,8 +60,8 @@ public class TimelineScreenGenerator {
     }
 
 
-    public static void openTimeline(ServerPlayer player, int page) {
-        List<ReplayEngine.ReplayAction> flatActions = ReplayEngine.getFlatActionsSnapshot();
+    public static void openTimeline(ServerPlayer player, ReplaySession session, int page) {
+        List<ReplaySession.ReplayAction> flatActions = session.getFlatActionsSnapshot();
         if (flatActions.isEmpty()) {
             player.sendSystemMessage(
                     MTRComponent.translatable("commands.mtr.replay.not_playing", "Not currently playing a replay.").withStyle(ChatFormatting.RED));
@@ -69,9 +69,9 @@ public class TimelineScreenGenerator {
         }
 
         // Collect ENTER + LEAF (skip EXIT – not user-facing)
-        List<ReplayEngine.ReplayAction> visible = new ArrayList<>();
-        for (ReplayEngine.ReplayAction a : flatActions) {
-            if (a.type() != ReplayEngine.ActionType.EXIT) {
+        List<ReplaySession.ReplayAction> visible = new ArrayList<>();
+        for (ReplaySession.ReplayAction a : flatActions) {
+            if (a.type() != ReplaySession.ActionType.EXIT) {
                 visible.add(a);
             }
         }
@@ -81,7 +81,7 @@ public class TimelineScreenGenerator {
 
         int from = page * ENTRIES_PER_PAGE;
         int to   = Math.min(from + ENTRIES_PER_PAGE, visible.size());
-        List<ReplayEngine.ReplayAction> pageActions = visible.subList(from, to);
+        List<ReplaySession.ReplayAction> pageActions = visible.subList(from, to);
 
         record LineParts(String leftPlain, String rightPlain,
                          MutableComponent leftComp, MutableComponent rightComp) {}
@@ -89,13 +89,13 @@ public class TimelineScreenGenerator {
         List<LineParts> parts = new ArrayList<>();
         int maxWidthPx = 0;
 
-        int snapshotCursor = ReplayEngine.getActionCursor();
+        int snapshotCursor = session.getActionCursor();
 
         long lastTick = Long.MIN_VALUE;
 
-        for (ReplayEngine.ReplayAction action : pageActions) {
+        for (ReplaySession.ReplayAction action : pageActions) {
             MTREvent event      = action.event();
-            boolean isEnter     = action.type() == ReplayEngine.ActionType.ENTER;
+            boolean isEnter     = action.type() == ReplaySession.ActionType.ENTER;
             int step            = action.visibleStepIndex();
             boolean isCurrent   = snapshotCursor > 0
                     && action == flatActions.get(snapshotCursor - 1);

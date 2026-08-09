@@ -137,7 +137,7 @@ public abstract class MTREvent {
     /**
      * Applies only this event's own effect on the world, never its children.
      * <p>
-     * This is what {@code ReplayEngine} calls, because it walks every node of the
+     * This is what {@code ReplaySession} calls, because it walks every node of the
      * flattened tree individually — recursing here would apply descendants a
      * second time. Scope events that also mutate the world (notably
      * {@link SetBlockEvent}, which encloses the updates its own write triggers)

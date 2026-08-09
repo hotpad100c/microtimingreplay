@@ -172,8 +172,9 @@ All commands are rooted at `/mtr` and require **operator permission**.
 │  └─ clear <name>
 └─ replay
 ├─ start <name>
-├─ stop
-├─ subscribe
+├─ stop [name]
+├─ list
+├─ subscribe <name>
 ├─ unsubscribe
 ├─ screen [page]
 ├─ forward <unit> [amount]
@@ -260,12 +261,26 @@ Refused while the profile is currently being recorded or replayed.
 ## Replay
 
 ### `/mtr replay start <name>`
-Backup the **current** world state inside the areas as `<name>_replay.dat` (used to restore your live world when replay ends).  
-Then restore the areas to the state they had **at the start of recording** using `<name>_record.dat`.  
-The cursor is placed at step 0; advance it with the commands below.
+Backup the **current** world state inside the areas as `replay.dat` (used to restore your live world when replay ends).  
+Then restore the areas to the state they had **at the start of recording** using `record.dat`.  
+The cursor is placed at step 0; advance it with the commands below. Starting also
+subscribes you to the new replay.
 
-### `/mtr replay stop`
-Restore the `_replay` backup (bring your live world back), clear all marker entities and replay entities, and close BossBars / sidebars of all subscribers.
+Several replays can run at once, one per profile. If the new profile's areas overlap
+those of a running replay you get a warning but the replay still starts — the two will
+write over each other's blocks, and whichever stops last restores its own backup on top.
+
+A replay cannot start while a recording is in progress, and vice versa.
+
+### `/mtr replay stop [name]`
+Restores the `replay.dat` backup (handing your live scene back), removes all marker and
+replay entities, and closes the BossBar and sidebar of every subscriber.
+
+Without an argument it stops **the replay you are watching**. With a profile name it
+stops that one. Can be run by a player, the console or a command block.
+
+### `/mtr replay list`
+Lists the running replays, with `▶` marking the one you are watching.
 
 ### `/mtr replay forward <unit> [amount]`
 ### `/mtr replay backward <unit> [amount]`
@@ -292,8 +307,12 @@ Automatic stepping: every `<delay>` game ticks, take one step in `<direction>` (
 ### `/mtr replay auto stop`
 Stop automatic stepping.
 
-### `/mtr replay subscribe` / `unsubscribe`
-Subscribe / unsubscribe from the replay **BossBar** and **sidebar timeline**.
+### `/mtr replay subscribe <name>` / `unsubscribe`
+Switches which replay you are watching, the **BossBar** and **sidebar timeline** follow
+your subscription, and so does every stepping command. Tab completion lists only the
+replays that are actually running.
+
+A player watches at most one replay at a time; subscribing to another leaves the first.
 
 ---
 
@@ -314,7 +333,7 @@ Bottom buttons: `◀ Prev` / `Next ▶` / `✕ Close`.
 ### `/mtr replay dump <step>`
 Open the **Java call-stack** dialog for the given step. Stack frames are color-coded by package / class / method / file:line and placed in a multi-line text box for easy **select-all & copy**; the title line supports click-to-copy and hover preview of the first 20 lines.
 
-Call stacks are captured **at recording time** when each event is constructed and stored together with the profile in `mtr_stacktrace/<name>.dat`. Frames belonging to the mod itself and mixin-synthesized methods are filtered out.
+Call stacks are captured **at recording time** when each event is constructed and stored together with the profile in `trace.dat`. Frames belonging to the mod itself and mixin-synthesized methods are filtered out.
 
 ---
 
@@ -343,12 +362,16 @@ All under the **Fabric config directory** (single-player `.minecraft/config/`, d
 
 | Path | Content |
 |---|---|
-| `config/mtr_profiles/<world-key>/<name>.dat` | Profile body of the current world: area definitions + all event frames (compressed NBT) |
-| `config/mtr_backups/<world-key>/<name>_record.dat` | World snapshot of the areas at the start of recording |
-| `config/mtr_backups/<world-key>/<name>_replay.dat` | Live-world snapshot taken just before replay started |
-| `config/mtr_stacktrace/<world-key>/<name>.dat` | Call stack of every step |
+| `config/mtr/<world-key>/<name>/profile.dat` | Profile body: area definitions + all event frames (compressed NBT) |
+| `config/mtr/<world-key>/<name>/record.dat` | World snapshot of the areas at the start of recording |
+| `config/mtr/<world-key>/<name>/replay.dat` | Live-world snapshot taken just before replay started |
+| `config/mtr/<world-key>/<name>/trace.dat` | Call stack of every step |
+
+> Everything belonging to one profile lives in its own directory, so deleting a profile takes its backups and traces with it.
 
 > Data is automatically isolated per world. `<world-key>` is generated from the world path and contains a readable world-folder name plus a short hash; different worlds can safely use profiles with the same name.
+
+> Recordings written by earlier versions under `config/mtr_profiles/<world-key>/` are moved into this layout automatically the first time the world loads. Recordings from before storage was world-scoped stay where they are — use `/mtr profile migrate <name>` to copy one into the current world.
 
 ---
 
