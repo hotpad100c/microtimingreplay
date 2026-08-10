@@ -6,9 +6,11 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
+import ml.mypals.microtimingreplay.event.BlockEntityCreationEvent;
 import ml.mypals.microtimingreplay.event.BlockEntityTickEvent;
 import ml.mypals.microtimingreplay.event.MovingPistonEvent;
 import ml.mypals.microtimingreplay.event.SetBlockEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.entity.TickingBlockEntity;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import net.minecraft.core.BlockPos;
@@ -77,22 +79,43 @@ public abstract class LevelMixin implements ScheduledTickAccess {
 
     @Inject(method = "setBlockEntity", at = @At("HEAD"))
     private void mtr$onSetBlockEntity(BlockEntity blockEntity, CallbackInfo ci) {
-        if (isClientSide) return;
-        if (!(blockEntity instanceof PistonMovingBlockEntity piston)) return;
-        if (!MTRState.isRecording((Level) (Object) this)) return;
-        if (!RecordingFilterConfig.isEnabled("moving_piston_start")) return;
+        if (isClientSide || blockEntity == null) return;
+        Level level = (Level) (Object) this;
+        if (!MTRState.isRecording(level)) return;
 
-        long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
-        MTRState.recordStep(new MovingPistonEvent(
-                currentTick,
-                piston.getBlockPos(),
-                Block.getId(piston.getMovedState()),
-                piston.getDirection(),
-                piston.isExtending(),
-                piston.isSourcePiston(),
-                false, // spawn
-                this.dimension().identifier().toString()
-        ));
+        String dim = this.dimension().identifier().toString();
+        MTRProfile activeProfile = MTRState.getActiveProfile();
+
+        if (blockEntity instanceof PistonMovingBlockEntity piston) {
+            if (RecordingFilterConfig.isEnabled("moving_piston_start")) {
+                long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
+                MTRState.recordStep(new MovingPistonEvent(
+                        currentTick,
+                        piston.getBlockPos(),
+                        Block.getId(piston.getMovedState()),
+                        piston.getDirection(),
+                        piston.isExtending(),
+                        piston.isSourcePiston(),
+                        false, // spawn
+                        dim
+                ));
+            }
+        } else {
+            if (RecordingFilterConfig.isEnabled("block_entity_creation")) {
+                BlockPos pos = blockEntity.getBlockPos();
+                if (activeProfile != null && !activeProfile.outsideArea(pos, dim)) {
+                    long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
+                    String typeKey = BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(blockEntity.getType()).toString();
+
+                    MTRState.recordStep(new BlockEntityCreationEvent(
+                            currentTick,
+                            pos,
+                            typeKey,
+                            dim
+                    ));
+                }
+            }
+        }
     }
 
 

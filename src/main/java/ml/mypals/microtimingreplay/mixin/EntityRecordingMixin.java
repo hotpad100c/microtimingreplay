@@ -3,25 +3,25 @@ package ml.mypals.microtimingreplay.mixin;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import ml.mypals.microtimingreplay.MTRState;
-import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
+import ml.mypals.microtimingreplay.event.EntityCollideAxisEvent;
 import ml.mypals.microtimingreplay.event.EntityMoveEvent;
 import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.replay.EntityReplayManager;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.util.ProblemReporter;
+import ml.mypals.microtimingreplay.util.PlayerProxy;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import ml.mypals.microtimingreplay.util.PlayerProxy;
+
+import java.util.Locale;
 
 @Mixin(Entity.class)
 public abstract class EntityRecordingMixin {
@@ -40,8 +40,6 @@ public abstract class EntityRecordingMixin {
                 if (!activeProfile.outsideAreaVec3(entity.position(), dim)) {
                     long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
 
-                    // Snapshot even though it is leaving: stepping backwards over this
-                    // event has to be able to rebuild it.
                     EntitySpawnEvent event = new EntitySpawnEvent(
                         currentTick,
                         PlayerProxy.replayUuid(entity).toString(),
@@ -68,10 +66,14 @@ public abstract class EntityRecordingMixin {
         }
 
         if (MTRState.isRecording(entity.level())) {
-            if (!RecordingFilterConfig.isEnabled("entity_move")) {
+            boolean recordMove = RecordingFilterConfig.isEnabled("entity_move");
+            boolean recordAxis = RecordingFilterConfig.isEnabled("entity_collide_axis");
+
+            if (!recordMove && !recordAxis) {
                 original.call(type, vec);
                 return;
             }
+
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
                 String dim = entity.level().dimension().identifier().toString();
@@ -81,28 +83,71 @@ public abstract class EntityRecordingMixin {
 
                 Vec3 newPos = entity.position();
 
-                if (oldPos.distanceToSqr(newPos) > 1e-7) {
+                if (oldPos.distanceToSqr(newPos) > 1e-7 || vec.lengthSqr() > 1e-7) {
                     if (!activeProfile.outsideAreaVec3(oldPos, dim) || !activeProfile.outsideAreaVec3(newPos, dim)) {
                         long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
                         String uuid = PlayerProxy.replayUuid(entity).toString();
                         String entityTypeKey = PlayerProxy.typeKey(entity);
                         Vec3 delta = entity.getDeltaMovement();
 
-                        EntityMoveEvent moveEvent = new EntityMoveEvent(
-                            currentTick, uuid, entityTypeKey,
-                            oldPos.x(), oldPos.y(), oldPos.z(),
-                            newPos.x(), newPos.y(), newPos.z(),
-                            entity.getYRot(), entity.getXRot(),
-                            delta.x(), delta.y(), delta.z(),
-                            dim
-                        );
+                        if (recordMove) {
+                            EntityMoveEvent moveEvent = new EntityMoveEvent(
+                                currentTick, uuid, entityTypeKey,
+                                oldPos.x(), oldPos.y(), oldPos.z(),
+                                newPos.x(), newPos.y(), newPos.z(),
+                                entity.getYRot(), entity.getXRot(),
+                                delta.x(), delta.y(), delta.z(),
+                                dim
+                            );
 
-                        MTRState.recordStep(moveEvent);
+                            MTRState.pushEvent(moveEvent);
+                            try {
+                                if (recordAxis) {
+                                    recordAxisEvents(entity, currentTick, uuid, entityTypeKey, oldPos, newPos, vec, dim);
+                                }
+                            } finally {
+                                MTRState.popEvent();
+                            }
+                        } else if (recordAxis) {
+                            recordAxisEvents(entity, currentTick, uuid, entityTypeKey, oldPos, newPos, vec, dim);
+                        }
                     }
                 }
                 return;
             }
         }
         original.call(type, vec);
+    }
+
+    @Unique
+    private void recordAxisEvents(Entity entity, long tick, String uuid, String typeKey, Vec3 oldPos,
+                                  Vec3 newPos, Vec3 reqVec, String dim) {
+        Vec3 actual = newPos.subtract(oldPos);
+        Vec3 curr = oldPos;
+
+        float yRot = entity.getYRot();
+        float xRot = entity.getXRot();
+
+        for (Direction.Axis axis : Direction.axisStepOrder(reqVec)) {
+            double req = reqVec.get(axis);
+            double act = actual.get(axis);
+
+            if (Math.abs(req) > 1e-6 || Math.abs(act) > 1e-6) {
+                Vec3 next = curr.add(
+                        axis == Direction.Axis.X ? act : 0,
+                        axis == Direction.Axis.Y ? act : 0,
+                        axis == Direction.Axis.Z ? act : 0
+                );
+
+                MTRState.recordStep(new EntityCollideAxisEvent(
+                        tick, uuid, typeKey, axis.getName().toUpperCase(Locale.ROOT),
+                        curr.x(), curr.y(), curr.z(),
+                        next.x(), next.y(), next.z(),
+                        yRot, xRot,
+                        req, act, dim
+                ));
+                curr = next;
+            }
+        }
     }
 }

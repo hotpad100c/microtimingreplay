@@ -19,6 +19,7 @@ public class EntitySpawnEvent extends Vec3PosEvent {
 
     private final String entityUuid;
     private final String entityType;
+    private final int EID;
     private final CompoundTag nbt;
     private final float yaw;
     private final float pitch;
@@ -26,7 +27,8 @@ public class EntitySpawnEvent extends Vec3PosEvent {
 
 
     public EntitySpawnEvent(long tick, String entityUuid, String entityType, CompoundTag nbt,
-                            double x, double y, double z, float yaw, float pitch, boolean despawn, String dimension) {
+                            double x, double y, double z, float yaw, float pitch, boolean despawn,
+                            String dimension, int eid) {
         super(tick, TYPE, new Vec3(x, y, z), dimension);
         this.entityUuid = entityUuid;
         this.entityType = entityType != null ? entityType : "unknown";
@@ -34,6 +36,13 @@ public class EntitySpawnEvent extends Vec3PosEvent {
         this.yaw = yaw;
         this.pitch = pitch;
         this.despawn = despawn;
+        this.EID = eid;
+    }
+
+    public EntitySpawnEvent(long tick, String entityUuid, String entityType, CompoundTag nbt,
+                            double x, double y, double z, float yaw, float pitch, boolean despawn,
+                            String dimension) {
+        this(tick, entityUuid, entityType, nbt, x, y, z, yaw, pitch, despawn, dimension, -1);
     }
 
     public String getEntityUuid() { return entityUuid; }
@@ -57,26 +66,23 @@ public class EntitySpawnEvent extends Vec3PosEvent {
 
     @Override
     public MutableComponent fillHoverText() {
-        Component spawnText = MTRComponent.translatable(
-                despawn ? "mtr.tooltip.entity.despawn" : "mtr.tooltip.entity.spawn",
-                despawn ? "[Despawn / Leave]" : "[Spawn / Enter]"
-        );
+        String spawnLabel = despawn ? "[Despawn / Leave]" : "[Spawn / Enter]";
 
-        MutableComponent text = MTRComponent.translatable(
-                "mtr.tooltip.entity_spawn_title",
-                "Entity %s @ [%.2f, %.2f, %.2f]",
-                spawnText.getString(), getX(), getY(), getZ()
-        ).append(Component.literal("\n")).withStyle(getColor());
+        MutableComponent text = Component.literal("Entity " + spawnLabel + " [" + entityType + "]").withStyle(getColor(), ChatFormatting.BOLD)
+                .append(Component.literal(" \n@[\n").withStyle(ChatFormatting.GRAY))
+                .append(formatColoredVec3Block(getX(), getY(), getZ()))
+                .append(Component.literal("\n]").withStyle(ChatFormatting.GRAY));
 
         if (getDimension() != null && !getDimension().isEmpty()) {
-            text.append(MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", getDimension()).withStyle(ChatFormatting.GOLD))
-                .append(Component.literal("\n"));
+            text.append(Component.literal("\n"))
+                .append(MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", getDimension()).withStyle(ChatFormatting.GOLD));
         }
 
         return text
-        .append(MTRComponent.translatable("mtr.tooltip.target", "Type: %s", entityType).withStyle(ChatFormatting.AQUA))
-        .append(Component.literal("\nUUID: ").withStyle(ChatFormatting.GRAY))
-        .append(Component.literal(entityUuid != null ? entityUuid : "null").withStyle(ChatFormatting.YELLOW));
+            .append(Component.literal("\nUUID: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(entityUuid != null ? entityUuid : "null").withStyle(ChatFormatting.YELLOW))
+            .append(Component.literal("\nEID: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(String.valueOf(EID)).withStyle(ChatFormatting.LIGHT_PURPLE));
     }
 
     @Override
@@ -116,6 +122,7 @@ public class EntitySpawnEvent extends Vec3PosEvent {
         tag.putFloat("yaw", yaw);
         tag.putFloat("pitch", pitch);
         tag.putBoolean("despawn", despawn);
+        tag.putInt("eid", EID);
         return tag;
     }
 
@@ -131,7 +138,8 @@ public class EntitySpawnEvent extends Vec3PosEvent {
                 tag.getFloat("yaw").orElse(0.0f),
                 tag.getFloat("pitch").orElse(0.0f),
                 tag.getBoolean("despawn").orElse(false),
-                tag.getString("dimension").orElse("")
+                tag.getString("dimension").orElse(""),
+                tag.getInt("eid").orElse(-1)
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

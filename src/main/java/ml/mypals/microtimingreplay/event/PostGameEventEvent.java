@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
 import ml.mypals.microtimingreplay.util.DisplayUtils;
+import ml.mypals.microtimingreplay.util.MTRComponent;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
@@ -76,5 +77,30 @@ public class PostGameEventEvent extends Vec3PosEvent {
         }
 
         MTRMarker.spawnTextDisplay(level, pos.x(), pos.y() + 0.8, pos.z(), mutableComponent, 0.7f);
+    }
+
+    @Override
+    public MutableComponent fillHoverText() {
+        MutableComponent text = Component.literal("PostGameEvent").withStyle(getColor(), ChatFormatting.BOLD)
+                .append(Component.literal(" \n@[\n").withStyle(ChatFormatting.GRAY))
+                .append(formatColoredVec3Block(getX(), getY(), getZ()))
+                .append(Component.literal("\n]").withStyle(ChatFormatting.GRAY));
+
+        BlockState state = getBlock();
+        String uuid = getEntityUUid();
+        if (state != null) {
+            text.append(Component.literal("\nBlockState: ").withStyle(ChatFormatting.GRAY))
+                .append(DisplayUtils.getNamesFormatState(state));
+        }
+        if (uuid != null) {
+            text.append(Component.literal("\nEntity: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(uuid).withStyle(ChatFormatting.YELLOW));
+        }
+
+        if (getDimension() != null && !getDimension().isEmpty()) {
+            text.append(Component.literal("\n"))
+                .append(MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", getDimension()).withStyle(ChatFormatting.GOLD));
+        }
+        return text;
     }
 }

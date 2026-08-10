@@ -106,7 +106,7 @@ public class TimelineGenerator {
         MutableComponent eventComp = node.event.getScoreboardText().withStyle(node.event.getColor());
 
         if (node.isCurrent) {
-            comp.append(eventComp.withStyle(ChatFormatting.GOLD,ChatFormatting.UNDERLINE));
+            comp.append(eventComp.withStyle(ChatFormatting.WHITE, ChatFormatting.UNDERLINE));
             comp.append(Component.literal(" ").append(node.highlightTag).withStyle(ChatFormatting.WHITE));
         } else {
             comp.append(eventComp);

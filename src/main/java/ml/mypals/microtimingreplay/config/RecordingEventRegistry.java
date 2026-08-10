@@ -37,6 +37,7 @@ public class RecordingEventRegistry {
         register("moving_piston_start", "Block", "Moving Piston Start", true);
         register("moving_piston_tick", "Block", "Moving Piston Tick", true);
         register("moving_piston_despawn", "Block", "Moving Piston Despawn", true);
+        register("block_entity_creation", "Block", "BlockEntity Creation", false);
 
         // Container
         register("item_transfer", "Container", "Item Transfer", false);
@@ -56,6 +57,8 @@ public class RecordingEventRegistry {
         register("entity_spawn", "Entity", "Entity Spawn", true);
         register("entity_despawn", "Entity", "Entity Despawn", true);
         register("entity_move", "Entity", "Entity Move", true);
+        register("entity_collide_axis", "Entity", "Entity Collide Axis", false);
+        register("entity_set_health", "Entity", "Entity Set Health", false);
         register("entity_tick", "Entity", "Entity Tick", true);
         register("block_entity_tick", "Entity", "Block Entity Tick", true);
 

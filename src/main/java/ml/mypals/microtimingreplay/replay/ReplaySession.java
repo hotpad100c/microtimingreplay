@@ -499,24 +499,41 @@ public class ReplaySession {
             return;
         }
 
-        if (event instanceof EntityMoveEvent moveEvt) {
-            try {
-                UUID uuid = UUID.fromString(moveEvt.getEntityUuid());
-                Entity entity = EntityReplayManager.getEntity(targetLevel, uuid);
-                if (entity != null) entity.setGlowingTag(true);
-            } catch (Exception ignored) {}
-        } else if (event instanceof EntityTickEvent tickEvt) {
-            try {
-                UUID uuid = UUID.fromString(tickEvt.getEntityUuid());
-                Entity entity = EntityReplayManager.getEntity(targetLevel, uuid);
-                if (entity != null) entity.setGlowingTag(true);
-            } catch (Exception ignored) {}
-        } else if (event instanceof EntitySpawnEvent spawnEvt) {
-            try {
-                UUID uuid = UUID.fromString(spawnEvt.getEntityUuid());
-                Entity entity = EntityReplayManager.getEntity(targetLevel, uuid);
-                if (entity != null) entity.setGlowingTag(true);
-            } catch (Exception ignored) {}
+        switch (event) {
+            case EntityMoveEvent moveEvt -> {
+                try {
+                    UUID uuid = UUID.fromString(moveEvt.getEntityUuid());
+                    Entity entity = EntityReplayManager.getEntity(targetLevel, uuid);
+                    if (entity != null) entity.setGlowingTag(true);
+                } catch (Exception ignored) {
+                }
+            }
+            case EntityTickEvent tickEvt -> {
+                try {
+                    UUID uuid = UUID.fromString(tickEvt.getEntityUuid());
+                    Entity entity = EntityReplayManager.getEntity(targetLevel, uuid);
+                    if (entity != null) entity.setGlowingTag(true);
+                } catch (Exception ignored) {
+                }
+            }
+            case EntitySpawnEvent spawnEvt -> {
+                try {
+                    UUID uuid = UUID.fromString(spawnEvt.getEntityUuid());
+                    Entity entity = EntityReplayManager.getEntity(targetLevel, uuid);
+                    if (entity != null) entity.setGlowingTag(true);
+                } catch (Exception ignored) {
+                }
+            }
+            case EntitySetHealthEvent healthEvt -> {
+                try {
+                    UUID uuid = UUID.fromString(healthEvt.getEntityUuid());
+                    Entity entity = EntityReplayManager.getEntity(targetLevel, uuid);
+                    if (entity != null) entity.setGlowingTag(true);
+                } catch (Exception ignored) {
+                }
+            }
+            default -> {
+            }
         }
 
         // Events without a marker (phases, entity events) opt out inside display().

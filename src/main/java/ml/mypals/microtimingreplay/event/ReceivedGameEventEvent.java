@@ -88,4 +88,34 @@ public class ReceivedGameEventEvent extends Vec3PosEvent {
         MTRMarker.spawnBlockDisplay(level, originPos, Blocks.MAGENTA_STAINED_GLASS.defaultBlockState(), originScale, ChatFormatting.LIGHT_PURPLE);
         MTRMarker.spawnTextDisplay(level, getOrigin().x(), getOrigin().y() + 0.5, getOrigin().z(), Component.literal("Vibration Origin").withStyle(ChatFormatting.LIGHT_PURPLE), 0.5f);
     }
+
+    @Override
+    public MutableComponent fillHoverText() {
+        MutableComponent text = Component.literal("ReceivedGameEvent").withStyle(getColor(), ChatFormatting.BOLD)
+                .append(Component.literal(" \nListener @[\n").withStyle(ChatFormatting.GRAY))
+                .append(formatColoredVec3Block(getX(), getY(), getZ()))
+                .append(Component.literal("\n]\n").withStyle(ChatFormatting.GRAY));
+
+        text.append(Component.literal("Origin @[\n").withStyle(ChatFormatting.LIGHT_PURPLE))
+            .append(formatColoredVec3Block(originX, originY, originZ))
+            .append(Component.literal("\n]").withStyle(ChatFormatting.LIGHT_PURPLE));
+
+        String srcId = getSourceUUID();
+        if (srcId != null) {
+            text.append(Component.literal("\nSourceEntity: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(srcId).withStyle(ChatFormatting.YELLOW));
+        }
+
+        String projOwner = getProjectileOwnerUUID();
+        if (projOwner != null) {
+            text.append(Component.literal("\nProjectileOwner: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(projOwner).withStyle(ChatFormatting.YELLOW));
+        }
+
+        if (getDimension() != null && !getDimension().isEmpty()) {
+            text.append(Component.literal("\n"))
+                .append(ml.mypals.microtimingreplay.util.MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", getDimension()).withStyle(ChatFormatting.GOLD));
+        }
+        return text;
+    }
 }

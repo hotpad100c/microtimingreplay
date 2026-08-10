@@ -61,11 +61,33 @@ public class Vec3PosEvent extends MTREvent {
         return BlockPos.containing(getPos());
     }
 
+    public static String formatExactCoord(double val) {
+        if (val == (long) val) {
+            return String.valueOf((long) val);
+        }
+        return String.valueOf(val);
+    }
+
+    public static MutableComponent formatColoredVec3Block(double x, double y, double z) {
+        return Component.literal("  ")
+                .append(Component.literal("X: ").withStyle(ChatFormatting.RED))
+                .append(Component.literal(formatExactCoord(x) + ", \n  ").withStyle(ChatFormatting.WHITE))
+                .append(Component.literal("Y: ").withStyle(ChatFormatting.GREEN))
+                .append(Component.literal(formatExactCoord(y) + ", \n  ").withStyle(ChatFormatting.WHITE))
+                .append(Component.literal("Z: ").withStyle(ChatFormatting.BLUE))
+                .append(Component.literal(formatExactCoord(z)).withStyle(ChatFormatting.WHITE));
+    }
+
     @Override
     public MutableComponent fillHoverText() {
-        MutableComponent text = Component.literal(getType() + " @ [" + formatCoord(x) + ", " + formatCoord(y) + ", " + formatCoord(z) + "]");
+        MutableComponent text = Component.literal(getType()).withStyle(getColor())
+                .append(Component.literal(" \n@[\n").withStyle(ChatFormatting.GRAY))
+                .append(formatColoredVec3Block(x, y, z))
+                .append(Component.literal("\n]").withStyle(ChatFormatting.GRAY));
+
         if (dimension != null && !dimension.isEmpty()) {
-            text.append(Component.literal("\n")).append(MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", dimension).withStyle(ChatFormatting.GOLD));
+            text.append(Component.literal("\n"))
+                .append(MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", dimension).withStyle(ChatFormatting.GOLD));
         }
         return text;
     }

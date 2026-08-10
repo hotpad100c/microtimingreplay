@@ -1,6 +1,8 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.replay.EntityReplayManager;
+import ml.mypals.microtimingreplay.util.DisplayUtils;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
@@ -8,69 +10,75 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-
-import java.util.UUID;
 import org.joml.Vector3f;
 
-public class EntityMoveEvent extends Vec3PosEvent {
-    public static final String TYPE = "entityMove";
+import java.util.UUID;
+
+public class EntityCollideAxisEvent extends Vec3PosEvent {
+    public static final String TYPE = "entityCollideAxis";
 
     private final String entityUuid;
     private final String entityType;
+    private final String axis;
     private final double oldX, oldY, oldZ;
     private final float yaw;
     private final float pitch;
-    private final double dx, dy, dz;
+    private final double attemptedDistance;
+    private final double collisionDistance;
 
-    public EntityMoveEvent(long tick, String entityUuid, String entityType,
-                           double oldX, double oldY, double oldZ,
-                           double newX, double newY, double newZ,
-                           float yaw, float pitch,
-                           double dx, double dy, double dz, String dimension) {
-        this(tick, TYPE, entityUuid, entityType, oldX, oldY, oldZ, newX, newY, newZ, yaw, pitch, dx, dy, dz, dimension);
-    }
-
-    protected EntityMoveEvent(long tick, String type, String entityUuid, String entityType,
-                              double oldX, double oldY, double oldZ,
-                              double newX, double newY, double newZ,
-                              float yaw, float pitch,
-                              double dx, double dy, double dz, String dimension) {
-        super(tick, type, new Vec3(newX, newY, newZ), dimension);
-        this.entityUuid = entityUuid;
+    public EntityCollideAxisEvent(long tick, String entityUuid, String entityType,
+                                  String axis,
+                                  double oldX, double oldY, double oldZ,
+                                  double newX, double newY, double newZ,
+                                  float yaw, float pitch,
+                                  double attemptedDistance, double collisionDistance,
+                                  String dimension) {
+        super(tick, TYPE, new Vec3(newX, newY, newZ), dimension);
+        this.entityUuid = entityUuid != null ? entityUuid : "";
         this.entityType = entityType != null ? entityType : "unknown";
+        this.axis = axis != null ? axis : "X";
         this.oldX = oldX;
         this.oldY = oldY;
         this.oldZ = oldZ;
         this.yaw = yaw;
         this.pitch = pitch;
-        this.dx = dx;
-        this.dy = dy;
-        this.dz = dz;
+        this.attemptedDistance = attemptedDistance;
+        this.collisionDistance = collisionDistance;
     }
 
     public String getEntityUuid() { return entityUuid; }
     public String getEntityType() { return entityType; }
+    public String getAxis() { return axis; }
     public double getOldX() { return oldX; }
     public double getOldY() { return oldY; }
     public double getOldZ() { return oldZ; }
     public float getYaw() { return yaw; }
     public float getPitch() { return pitch; }
-    public Vec3 getVelocity() { return new Vec3(dx, dy, dz); }
+    public double getAttemptedDistance() { return attemptedDistance; }
+    public double getCollisionDistance() { return collisionDistance; }
 
     @Override
     public ChatFormatting getColor() {
-        return ChatFormatting.GOLD;
+        return switch (axis.toUpperCase()) {
+            case "X" -> ChatFormatting.RED;
+            case "Y" -> ChatFormatting.GREEN;
+            case "Z" -> ChatFormatting.BLUE;
+            default -> ChatFormatting.YELLOW;
+        };
     }
 
     @Override
     public MutableComponent getScoreboardText() {
-        return appendPosText(MTRComponent.translatable("mtr.scoreboard.event.leaf.entitymove", "[Entity Move] " + entityType));
+        String text = String.format("[%s-Axis] (%.2f -> %.2f)", axis, getOldX(), getX());
+        return Component.literal(text);
     }
 
     @Override
     public MutableComponent fillHoverText() {
-        MutableComponent text = MTRComponent.translatable("mtr.tooltip.entity_move_title", "Entity Move [%s]", entityType)
+        MutableComponent text = MTRComponent.translatable("mtr.tooltip.entity_collide_axis_title", "Move Axis [%s-Axis]", axis)
                 .withStyle(getColor())
                 .append(Component.literal("\n"));
 
@@ -88,10 +96,10 @@ public class EntityMoveEvent extends Vec3PosEvent {
         }
 
         return text
-        .append(MTRComponent.translatable("mtr.tooltip.target", "Type: %s", entityType).withStyle(ChatFormatting.AQUA))
-        .append(Component.literal("\nUUID: ").withStyle(ChatFormatting.GRAY))
-        .append(Component.literal(entityUuid != null ? entityUuid : "null").withStyle(ChatFormatting.YELLOW))
-        .append(Component.literal(String.format(java.util.Locale.ROOT, "\nVelocity: (%s, %s, %s)", formatExactCoord(dx), formatExactCoord(dy), formatExactCoord(dz))).withStyle(ChatFormatting.WHITE));
+            .append(MTRComponent.translatable("mtr.tooltip.target", "Type: %s", entityType).withStyle(ChatFormatting.AQUA))
+            .append(Component.literal("\nUUID: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(entityUuid).withStyle(ChatFormatting.YELLOW))
+            .append(Component.literal(String.format(java.util.Locale.ROOT, "\nAttempted: %s | Resolved: %s", formatExactCoord(attemptedDistance), formatExactCoord(collisionDistance))).withStyle(ChatFormatting.WHITE));
     }
 
     @Override
@@ -111,15 +119,28 @@ public class EntityMoveEvent extends Vec3PosEvent {
             } else {
                 entity.absSnapTo(oldX, oldY, oldZ, yaw, pitch);
             }
-            entity.setDeltaMovement(0,0,0);
+            entity.setDeltaMovement(0, 0, 0);
             EntityReplayManager.syncEntityPosition(level, entity);
         }
     }
 
     @Override
     public void display(ServerLevel level, Vector3f scale) {
-        // Entity events are shown by making the replay entity glow,
-        // do nothing here!
+        display(level);
+    }
+
+    @Override
+    public void display(ServerLevel level) {
+        if (level == null || getDimension() == null) return;
+        Vec3 start = new Vec3(oldX, oldY, oldZ);
+        Vec3 end = getPos();
+
+        BlockState glassState = DisplayUtils.getGlassState(getColor());
+        DisplayUtils.spawnLineDisplay(level, start, end, glassState, 0.25f, getColor());
+
+        Vec3 mid = start.add(end).scale(0.5);
+        String labelText = String.format("[%s-Axis] %.2f -> %.2f", axis, attemptedDistance, collisionDistance);
+        MTRMarker.spawnTextDisplay(level, mid.add(0, 0.4, 0), Component.literal(labelText).withStyle(getColor()), 0.7f);
     }
 
     @Override
@@ -127,22 +148,23 @@ public class EntityMoveEvent extends Vec3PosEvent {
         CompoundTag tag = super.writeNBT();
         tag.putString("entityUuid", entityUuid != null ? entityUuid : "");
         tag.putString("entityType", entityType != null ? entityType : "");
+        tag.putString("axis", axis != null ? axis : "X");
         tag.putDouble("oldX", oldX);
         tag.putDouble("oldY", oldY);
         tag.putDouble("oldZ", oldZ);
         tag.putFloat("yaw", yaw);
         tag.putFloat("pitch", pitch);
-        tag.putDouble("dx", dx);
-        tag.putDouble("dy", dy);
-        tag.putDouble("dz", dz);
+        tag.putDouble("attemptedDistance", attemptedDistance);
+        tag.putDouble("collisionDistance", collisionDistance);
         return tag;
     }
 
-    public static EntityMoveEvent readNBT(CompoundTag tag) {
-        EntityMoveEvent event = new EntityMoveEvent(
+    public static EntityCollideAxisEvent readNBT(CompoundTag tag) {
+        EntityCollideAxisEvent event = new EntityCollideAxisEvent(
                 tag.getLong("tick").orElse(0L),
                 tag.getString("entityUuid").orElse(""),
                 tag.getString("entityType").orElse(""),
+                tag.getString("axis").orElse("X"),
                 tag.getDouble("oldX").orElse(0.0),
                 tag.getDouble("oldY").orElse(0.0),
                 tag.getDouble("oldZ").orElse(0.0),
@@ -151,10 +173,9 @@ public class EntityMoveEvent extends Vec3PosEvent {
                 tag.getDouble("z").orElse(0.0),
                 tag.getFloat("yaw").orElse(0.0f),
                 tag.getFloat("pitch").orElse(0.0f),
-                tag.getDouble("dx").orElse(0.0),
-                tag.getDouble("dy").orElse(0.0),
-                tag.getDouble("dz").orElse(0.0),
-                tag.getString("dimension").orElse("unknown")
+                tag.getDouble("attemptedDistance").orElse(0.0),
+                tag.getDouble("collisionDistance").orElse(0.0),
+                tag.getString("dimension").orElse("")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

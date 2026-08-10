@@ -3,6 +3,7 @@ package ml.mypals.microtimingreplay.marker;
 import com.mojang.math.Transformation;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.replay.ReplayContext;
+import ml.mypals.microtimingreplay.util.DisplayUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -45,33 +46,17 @@ public final class MTRMarker {
     }
 
     public static void spawnTextDisplay(ServerLevel level, double x, double y, double z, Component text, float scale) {
-        TextDisplay entity = new TextDisplay(EntityType.TEXT_DISPLAY, level);
-        entity.setPos(x, y, z);
-        entity.setBillboardConstraints(Display.BillboardConstraints.CENTER);
-        entity.setFlags((byte)(entity.getFlags() | Display.TextDisplay.FLAG_SEE_THROUGH));
-        entity.setTextOpacity((byte) 255);
-        entity.setBackgroundColor(0x80000000);
-        entity.setBrightnessOverride(new Brightness(15, 15));
-
-        Transformation transform = new Transformation(new Vector3f(0, 0, 0), new Quaternionf(), new Vector3f(scale, scale, scale), new Quaternionf());
-        entity.setTransformation(transform);
-        entity.setNoGravity(true);
-        entity.setInvulnerable(true);
-        entity.setSilent(true);
-        tagMarker(entity);
-
-        level.addFreshEntity(entity);
-        entity.setText(text);
+        DisplayUtils.spawnTextDisplay(level, x, y, z, text, scale);
     }
     public static void spawnTextDisplay(ServerLevel level, Vec3 pos, Component text, float scale) {
-        spawnTextDisplay(level, pos.x(),pos.y(),pos.z(), text, scale);
+        DisplayUtils.spawnTextDisplay(level, pos, text, scale);
     }
     public static void spawnBlockDisplay(ServerLevel level, Vec3 pos, BlockState blockState, float scale, ChatFormatting teamColor) {
-        spawnBlockDisplay(level, pos, blockState, new Vector3f(scale, scale, scale), teamColor);
+        DisplayUtils.spawnBlockDisplay(level, pos, blockState, scale, teamColor);
     }
 
     public static void spawnBlockDisplay(ServerLevel level, BlockPos pos, BlockState blockState, float scale, ChatFormatting teamColor) {
-        spawnBlockDisplay(level, new Vec3(pos.getX(),pos.getY(),pos.getZ()), blockState, new Vector3f(scale, scale, scale), teamColor);
+        DisplayUtils.spawnBlockDisplay(level, pos, blockState, scale, teamColor);
     }
 
     public static void spawnAreaMarker(ServerLevel level, MTRProfile.Area area) {
@@ -145,28 +130,7 @@ public final class MTRMarker {
     }
 
     public static void spawnBlockDisplay(ServerLevel level, Vec3 pos, BlockState blockState, Vector3f scale, ChatFormatting teamColor) {
-        BlockDisplay entity = new BlockDisplay(EntityType.BLOCK_DISPLAY, level);
-        float offsetX = -(scale.x() - 1.0f) / 2.0f;
-        float offsetY = -(scale.y() - 1.0f) / 2.0f;
-        float offsetZ = -(scale.z() - 1.0f) / 2.0f;
-        entity.setPos(pos.x() + offsetX, pos.y() + offsetY, pos.z() + offsetZ);
-        entity.setBlockState(blockState);
-        entity.setBrightnessOverride(new Brightness(15, 15));
-
-        Transformation transform = new Transformation(new Vector3f(0, 0, 0), new Quaternionf(), scale, new Quaternionf());
-        entity.setTransformation(transform);
-        entity.setNoGravity(true);
-        entity.setInvulnerable(true);
-        entity.setSilent(true);
-        tagMarker(entity);
-        if (teamColor != null && teamColor.getColor() != null) {
-            entity.setGlowingTag(true);
-            entity.setGlowColorOverride(teamColor.getColor());
-            level.addFreshEntity(entity);
-        } else {
-            level.addFreshEntity(entity);
-        }
-
+        DisplayUtils.spawnBlockDisplay(level, pos, blockState, scale, teamColor);
     }
 
     public static void removeEntity(ServerLevel level, UUID uuid) {

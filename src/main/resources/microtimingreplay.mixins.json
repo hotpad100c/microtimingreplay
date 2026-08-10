@@ -9,6 +9,7 @@
     "HopperTransferMixin",
     "LevelMixin",
     "LevelTicksMixin",
+    "LivingEntityRecordingMixin",
     "MovingPistonTickMixin",
     "NeighborUpdaterMixin",
     "PlayerTickMixin",

@@ -45,12 +45,12 @@ public class EventFilterScreenGenerator {
                 BODY_WIDTH
         ));
         bodyLines.add(new PlainMessage(
-                Component.literal("Click any button below to toggle recording on/off for that event:")
+                MTRComponent.translatable("mtr.filter.instruction", "Click any button below to toggle recording on/off for that event:")
                         .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC),
                 BODY_WIDTH
         ));
         bodyLines.add(new PlainMessage(
-                Component.literal(String.format("Page %d / %d  |  Total Rules: %d", currentPage + 1, totalPages, allEntries.size()))
+                MTRComponent.translatable("mtr.filter.page_info", "Page %d / %d  |  Total Rules: %d", currentPage + 1, totalPages, allEntries.size())
                         .withStyle(ChatFormatting.DARK_AQUA),
                 BODY_WIDTH
         ));
@@ -62,10 +62,15 @@ public class EventFilterScreenGenerator {
             ChatFormatting statusColor = enabled ? ChatFormatting.GREEN : ChatFormatting.RED;
             String prefix = enabled ? "[✔] " : "[✖] ";
 
+            Component eventNameComp = MTRComponent.translatable("mtr.filter.event." + entry.id(), entry.defaultName());
+            Component categoryComp = MTRComponent.translatable("mtr.filter.category." + entry.category().toLowerCase(), entry.category());
+
             MutableComponent label = Component.literal(prefix)
                     .withStyle(statusColor, ChatFormatting.BOLD)
-                    .append(Component.literal(entry.defaultName()).withStyle(enabled ? ChatFormatting.WHITE : ChatFormatting.GRAY))
-                    .append(Component.literal(" [" + entry.category() + "]").withStyle(ChatFormatting.DARK_GRAY));
+                    .append(eventNameComp.copy().withStyle(enabled ? ChatFormatting.WHITE : ChatFormatting.GRAY))
+                    .append(Component.literal(" [").withStyle(ChatFormatting.DARK_GRAY))
+                    .append(categoryComp.copy().withStyle(ChatFormatting.DARK_GRAY))
+                    .append(Component.literal("]").withStyle(ChatFormatting.DARK_GRAY));
 
             buttons.add(actionBtn(
                     label,
@@ -76,27 +81,27 @@ public class EventFilterScreenGenerator {
 
         if (currentPage > 0) {
             buttons.add(actionBtn(
-                    Component.literal("◀ Prev").withStyle(ChatFormatting.YELLOW),
+                    MTRComponent.translatable("mtr.filter.btn_prev", "◀ Prev").withStyle(ChatFormatting.YELLOW),
                     "/mtr filter screen " + (currentPage - 1),
                     300
             ));
         }
         if (currentPage < totalPages - 1) {
             buttons.add(actionBtn(
-                    Component.literal("Next ▶").withStyle(ChatFormatting.YELLOW),
+                    MTRComponent.translatable("mtr.filter.btn_next", "Next ▶").withStyle(ChatFormatting.YELLOW),
                     "/mtr filter screen " + (currentPage + 1),
                     300
             ));
         }
 
         buttons.add(actionBtn(
-                Component.literal("Reset Defaults").withStyle(ChatFormatting.AQUA),
+                MTRComponent.translatable("mtr.filter.btn_reset", "Reset Defaults").withStyle(ChatFormatting.AQUA),
                 "/mtr filter reset " + currentPage,
                 300
         ));
 
         buttons.add(new ActionButton(
-                new CommonButtonData(Component.literal("✕ Close").withStyle(ChatFormatting.GRAY), Optional.empty(), 300),
+                new CommonButtonData(MTRComponent.translatable("mtr.filter.btn_close", "✕ Close").withStyle(ChatFormatting.GRAY), Optional.empty(), 300),
                 Optional.empty()
         ));
 
