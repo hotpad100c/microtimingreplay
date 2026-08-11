@@ -2,6 +2,7 @@ package ml.mypals.microtimingreplay.event;
 
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
+import ml.mypals.microtimingreplay.util.DisplayUtils;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -142,8 +143,9 @@ public class ItemTransferEvent extends BlockPosEvent {
         itemDisplay.setCustomName(Component.literal(stack.getHoverName().getString() + " x" + count).withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
         itemDisplay.setCustomNameVisible(true);
 
-        itemDisplay.addTag("mtr_marker");
-        itemDisplay.addTag("mtr_replay_marker");
+        // Must go through tagMarker: it also stamps the session tag, and MarkerManager
+        // skips any Display that lacks one — tagging by hand here leaked these forever.
+        DisplayUtils.tagMarker(itemDisplay);
 
         level.addFreshEntity(itemDisplay);
     }

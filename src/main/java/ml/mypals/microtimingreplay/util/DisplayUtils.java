@@ -114,14 +114,13 @@ public class DisplayUtils {
 
         float actualLen = (float) Math.max(0.05, length);
         Vector3f scale = new Vector3f(thickness, thickness, actualLen);
-        Vector3f translation = new Vector3f(-thickness / 2.0f, -thickness / 2.0f, -actualLen / 2.0f);
 
         BlockDisplay entity = new BlockDisplay(EntityType.BLOCK_DISPLAY, level);
-        entity.setPos(mid.x(), mid.y(), mid.z());
+        entity.setPos(start);
         entity.setBlockState(blockState);
         entity.setBrightnessOverride(new Brightness(15, 15));
 
-        Transformation transform = new Transformation(translation, rotation, scale, new Quaternionf());
+        Transformation transform = new Transformation(new Vector3f(0,0,0), rotation, scale, new Quaternionf());
         entity.setTransformation(transform);
         entity.setNoGravity(true);
         entity.setInvulnerable(true);

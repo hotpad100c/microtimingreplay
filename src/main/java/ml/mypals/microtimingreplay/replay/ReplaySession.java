@@ -8,6 +8,7 @@ import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.*;
 import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
+import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.marker.MarkerManager;
 import ml.mypals.microtimingreplay.marker.PistonDisplayManager;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
@@ -143,6 +144,8 @@ public class ReplaySession {
 
     private void stopReplayInSession(String sessionId) {
         stopAutoReplay();
+        // Before the subscriber list is dropped, hand every camera back to its owner.
+        PlayerPositioner.disableAll(onlineSubscribers());
         if (bossBar != null) {
             for (ServerPlayer player : onlineSubscribers()) {
                 VirtualScoreboardManager.removeScoreboard(player);
@@ -183,6 +186,60 @@ public class ReplaySession {
 
     public int getActionCursor() {
         return actionCursor;
+    }
+
+    /**
+     * The nearest action at or before the cursor that has a world position, or null.
+     *
+     * <p>Phases and queues carry no coordinates, so the camera has to walk back to the
+     * last thing that does. Walks the live list rather than a snapshot: this runs on every
+     * step, and {@link #getFlatActionsSnapshot()} copies a list six figures long.
+     *
+     * @param lookback how far back to search before giving up
+     */
+    public ReplayAction currentPositionedAction(int lookback) {
+        int cursor = Math.clamp(actionCursor, 0, flatActions.size());
+        int limit = Math.max(0, cursor - lookback);
+
+        for (int i = cursor - 1; i >= limit; i--) {
+            ReplayAction action = flatActions.get(i);
+            if (action.event().getMarkerPos() != null) {
+                return action;
+            }
+        }
+        return null;
+    }
+
+    /** Where the cursor sits once EXIT actions — which are never shown — are dropped. */
+    public record RowCursor(int cursorRow, int totalRows) {}
+
+    /**
+     * Runs on every advance, so it walks {@code flatActions} once and copies nothing.
+     * {@link #getFlatActionsSnapshot()} would hand out a full copy of a list that is
+     * six figures long in a real recording.
+     */
+    public RowCursor rowCursor() {
+        int bounded = Math.clamp(actionCursor, 0, flatActions.size());
+        int beforeCursor = 0;
+        int total = 0;
+
+        for (int i = 0; i < flatActions.size(); i++) {
+            if (flatActions.get(i).type() == ActionType.EXIT) continue;
+            total++;
+            if (i < bounded) beforeCursor++;
+        }
+
+        // Landing on a scope's EXIT counts as still being on the row that opened it,
+        // which is exactly what "the last row before the cursor" gives us.
+        return new RowCursor(beforeCursor - 1, total);
+    }
+
+    public long getCurrentVirtualTick() {
+        return currentVirtualTick;
+    }
+
+    public long getTotalTick() {
+        return totalTick;
     }
 
     public static class AutoReplayTask {
@@ -245,10 +302,15 @@ public class ReplaySession {
             VirtualScoreboardManager.setupScoreboard(player);
             updateScoreboards();
         }
+        // Covers both entry points — the command and the add-on's subscribe packet.
+        MTRNetworking.sendSessions(player);
+        MTRNetworking.sendTimeline(player);
     }
 
     public void unsubscribe(ServerPlayer player) {
         if (player == null) return;
+        // Never leave someone stuck in spectator because they stopped watching.
+        PlayerPositioner.disable(player);
         subscribers.remove(player.getUUID());
         if (bossBar != null) {
             bossBar.removePlayer(player);
@@ -272,6 +334,24 @@ public class ReplaySession {
             return false;
         });
         return online;
+    }
+
+    /**
+     * Everything that has to happen after the cursor moves: the boss bar, the virtual
+     * scoreboard, and — for players running the client add-on — a cursor packet so their
+     * HUD and timeline screen track the replay without polling.
+     */
+    private void notifyStateChanged() {
+        updateBossBar();
+        updateScoreboards();
+
+        List<ServerPlayer> watching = onlineSubscribers();
+        MTRNetworking.broadcastCursor(this, watching);
+        for (ServerPlayer player : watching) {
+            if (PlayerPositioner.isFollowing(player)) {
+                PlayerPositioner.focusOnCursor(player, this, player.level());
+            }
+        }
     }
 
     private void updateScoreboards() {
@@ -579,7 +659,7 @@ public class ReplaySession {
     }
 
 
-    private static ServerLevel resolveLevel(ServerLevel defaultLevel, MTREvent event) {
+    public static ServerLevel resolveLevel(ServerLevel defaultLevel, MTREvent event) {
         if (!event.hasDimension()) return defaultLevel;
         String dim = event.getDimension();
         if (dim == null || dim.isEmpty()) return defaultLevel;
@@ -652,8 +732,7 @@ public class ReplaySession {
         }
 
         renderCurrentState(level, startCursor);
-        updateBossBar();
-        updateScoreboards();
+        notifyStateChanged();
         if (taken > 0)
             level.getServer().tickRateManager().stepGameIfPaused(2);
         return taken;
@@ -701,8 +780,7 @@ public class ReplaySession {
         }
 
         renderCurrentState(level, startCursor);
-        updateBossBar();
-        updateScoreboards();
+        notifyStateChanged();
         if (taken > 0)
             level.getServer().tickRateManager().stepGameIfPaused(2);
         return taken;
@@ -754,8 +832,7 @@ public class ReplaySession {
         }
 
         renderCurrentState(level, startCursor);
-        updateBossBar();
-        updateScoreboards();
+        notifyStateChanged();
         level.getServer().tickRateManager().stepGameIfPaused(2);
         
         return Math.abs(actionCursor - startCursor);
@@ -794,8 +871,7 @@ public class ReplaySession {
         }
 
         renderCurrentState(level, startCursor);
-        updateBossBar();
-        updateScoreboards();
+        notifyStateChanged();
         if (takenActions > 0)
             level.getServer().tickRateManager().stepGameIfPaused(2);
         return crossed;
@@ -840,8 +916,7 @@ public class ReplaySession {
         }
 
         renderCurrentState(level, startCursor);
-        updateBossBar();
-        updateScoreboards();
+        notifyStateChanged();
         if (takenActions > 0)
             level.getServer().tickRateManager().stepGameIfPaused(2);
         return crossed;

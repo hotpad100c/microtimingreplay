@@ -13,6 +13,7 @@ import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.replay.dialog.EventFilterScreenGenerator;
 import ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
+import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
 import ml.mypals.microtimingreplay.replay.ReplayContext;
@@ -613,14 +614,17 @@ public class MTRCommand {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.player_only", "This command can only be executed by a player."));
             return 0;
         }
-        TimelineScreenGenerator.openTimeline(player, session, page);
+        // Players running the client add-on get the real screen; everyone else the dialog.
+        if (!MTRNetworking.openTimelineScreen(player)) {
+            TimelineScreenGenerator.openTimeline(player, session, page);
+        }
         return 1;
     }
 
     private static int openFilterScreen(CommandContext<CommandSourceStack> context, int page) {
         if (!context.getSource().isPlayer()) return 0;
         ServerPlayer player = context.getSource().getPlayer();
-        if (player != null) {
+        if (player != null && !MTRNetworking.openFilterScreen(player)) {
             EventFilterScreenGenerator.openFilterScreen(player, page);
         }
         return 1;

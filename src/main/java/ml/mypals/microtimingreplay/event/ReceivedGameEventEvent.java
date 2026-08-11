@@ -91,7 +91,7 @@ public class ReceivedGameEventEvent extends Vec3PosEvent {
 
     @Override
     public MutableComponent fillHoverText() {
-        MutableComponent text = Component.literal("ReceivedGameEvent").withStyle(getColor(), ChatFormatting.BOLD)
+        MutableComponent text = Component.literal("ReceivedGameEvent").withStyle(getColor())
                 .append(Component.literal(" \nListener @[\n").withStyle(ChatFormatting.GRAY))
                 .append(formatColoredVec3Block(getX(), getY(), getZ()))
                 .append(Component.literal("\n]\n").withStyle(ChatFormatting.GRAY));

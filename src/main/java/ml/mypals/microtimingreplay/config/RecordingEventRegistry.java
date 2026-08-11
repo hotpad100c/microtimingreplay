@@ -38,18 +38,18 @@ public class RecordingEventRegistry {
         register("moving_piston_tick", "Block", "Moving Piston Tick", true);
         register("moving_piston_despawn", "Block", "Moving Piston Despawn", true);
         register("block_entity_creation", "Block", "BlockEntity Creation", false);
-
+        register("block_entity_tick", "Block", "Block Entity Tick", true);
         // Container
         register("item_transfer", "Container", "Item Transfer", false);
 
-        // Schedule & Queues
+        // Queues
         register("add_schedule_tick", "Schedule", "Add Schedule Tick", true);
         register("block_tick", "Schedule", "Execute Block Tick", true);
         register("fluid_tick", "Schedule", "Execute Fluid Tick", true);
         register("add_block_event", "Schedule", "Add Block Event", true);
         register("execute_block_event", "Schedule", "Execute Block Event", true);
 
-        // Redstone & Updates
+        // Updates
         register("neighbor_update", "Redstone", "Neighbor Update", true);
         register("shape_update", "Redstone", "Shape Update", true);
 
@@ -60,9 +60,9 @@ public class RecordingEventRegistry {
         register("entity_collide_axis", "Entity", "Entity Collide Axis", false);
         register("entity_set_health", "Entity", "Entity Set Health", false);
         register("entity_tick", "Entity", "Entity Tick", true);
-        register("block_entity_tick", "Entity", "Block Entity Tick", true);
 
-        // GameEvent & Vibration
+
+        // GameEvent
         register("post_game_event", "GameEvent", "Post Game Event", true);
         register("received_game_event", "GameEvent", "Received Game Event", true);
 

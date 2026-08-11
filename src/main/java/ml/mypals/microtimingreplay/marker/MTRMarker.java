@@ -2,7 +2,6 @@ package ml.mypals.microtimingreplay.marker;
 
 import com.mojang.math.Transformation;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
-import ml.mypals.microtimingreplay.replay.ReplayContext;
 import ml.mypals.microtimingreplay.util.DisplayUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -25,24 +24,13 @@ public final class MTRMarker {
 
     private MTRMarker() {}
 
-    public static final String SESSION_TAG_PREFIX = "mtr_s_";
-
-    public static String sessionTag(String sessionId) {
-        return SESSION_TAG_PREFIX + sessionId;
-    }
-
     /**
-     * Markers carry the tag of the session that spawned them. Each replay clears and
-     * redraws on every step, so without this one session's step would wipe another's
-     * markers.
+     * Delegates so the tag has exactly one definition. It used to be spelled out here as
+     * well, which meant readers and writers could drift apart without anything failing
+     * loudly — markers would simply stop being cleared.
      */
-    private static void tagMarker(net.minecraft.world.entity.Entity entity) {
-        entity.addTag("mtr_marker");
-        entity.addTag("mtr_replay_marker");
-        String session = ReplayContext.current();
-        if (session != null) {
-            entity.addTag(sessionTag(session));
-        }
+    public static String sessionTag(String sessionId) {
+        return DisplayUtils.sessionTag(sessionId);
     }
 
     public static void spawnTextDisplay(ServerLevel level, double x, double y, double z, Component text, float scale) {

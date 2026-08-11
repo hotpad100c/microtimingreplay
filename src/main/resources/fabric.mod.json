@@ -18,6 +18,9 @@
 	"entrypoints": {
 		"main": [
 			"ml.mypals.microtimingreplay.MicroTimingReplay"
+		],
+		"client": [
+			"ml.mypals.microtimingreplay.client.MTRClient"
 		]
 	},
 	"mixins": [

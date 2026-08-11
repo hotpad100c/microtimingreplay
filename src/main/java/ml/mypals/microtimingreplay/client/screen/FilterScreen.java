@@ -1,0 +1,179 @@
+package ml.mypals.microtimingreplay.client.screen;
+
+import ml.mypals.microtimingreplay.client.ClientReplayState;
+import ml.mypals.microtimingreplay.client.MTRClientNetworking;
+import ml.mypals.microtimingreplay.network.MTRPayloads;
+import ml.mypals.microtimingreplay.util.MTRComponent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
+
+import java.util.ArrayList;
+import java.util.List;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+
+/**
+ * Recording filter, one tab per category.
+ *
+ * <p>The state shown is the server's — toggling sends an intent and waits for the
+ * server's broadcast to come back, so two admins editing at once cannot drift apart.
+ */
+@Environment(EnvType.CLIENT)
+public class FilterScreen extends Screen {
+
+    private static final int TAB_HEIGHT = 18;
+    private static final int TAB_GAP = 3;
+    private static final int ROW_HEIGHT = 20;
+    private static final int LIST_TOP = 56;
+    private static final int LIST_BOTTOM_MARGIN = 30;
+
+    private String activeCategory = "";
+    private int scroll = 0;
+
+    public FilterScreen() {
+        super(MTRComponent.translatable("mtr.filter.title", "Event Recording Filter"));
+    }
+
+    @Override
+    protected void init() {
+        // The panel already asked for this, but the screen can also be reached from the
+        // timeline, and an empty list would be a confusing thing to land on.
+        MTRClientNetworking.requestFilter();
+
+        List<String> categories = ClientReplayState.filterCategories();
+        if (activeCategory.isEmpty() && !categories.isEmpty()) {
+            activeCategory = categories.getFirst();
+        }
+
+        int bottom = this.height - 24;
+        addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.filter.reset", "Reset to defaults"),
+                b -> MTRClientNetworking.resetFilter()).bounds(8, bottom, 120, 18).build());
+        addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.filter.close", "Close"),
+                b -> onClose()).bounds(this.width - 80, bottom, 70, 18).build());
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    private List<MTRPayloads.FilterRow> currentRows() {
+        List<MTRPayloads.FilterRow> result = new ArrayList<>();
+        for (MTRPayloads.FilterRow row : ClientReplayState.filterRows()) {
+            if (row.category().equals(activeCategory)) result.add(row);
+        }
+        return result;
+    }
+
+    private record Tab(String category, int x, int width) {}
+
+    private List<Tab> tabs() {
+        List<Tab> tabs = new ArrayList<>();
+        int x = 8;
+        for (String category : ClientReplayState.filterCategories()) {
+            int width = this.font.width(categoryLabel(category)) + 16;
+            tabs.add(new Tab(category, x, width));
+            x += width + TAB_GAP;
+        }
+        return tabs;
+    }
+
+    private Component categoryLabel(String category) {
+        return MTRComponent.translatable("mtr.filter.category." + category.toLowerCase(), category);
+    }
+
+    private int visibleRowCount() {
+        return Math.max(1, (this.height - LIST_TOP - LIST_BOTTOM_MARGIN) / ROW_HEIGHT);
+    }
+
+    private void clampScroll() {
+        scroll = Math.clamp(scroll, 0, Math.max(0, currentRows().size() - visibleRowCount()));
+    }
+
+    // ── drawing ──────────────────────────────────────────────────────────────
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+
+        graphics.text(this.font, this.title, 8, 8, MTRWidgets.TEXT);
+        graphics.text(this.font,
+                MTRComponent.translatable("mtr.filter.subtitle", "Per-world config — event_filter.json"),
+                8, 20, MTRWidgets.TEXT_DIM);
+
+        for (Tab tab : tabs()) {
+            boolean hovered = MTRWidgets.isOver(mouseX, mouseY, tab.x(), 32, tab.width(), TAB_HEIGHT);
+            MTRWidgets.card(graphics, this.font, categoryLabel(tab.category()),
+                    tab.x(), 32, tab.width(), TAB_HEIGHT, hovered, tab.category().equals(activeCategory));
+        }
+
+        int listBottom = this.height - LIST_BOTTOM_MARGIN;
+        MTRWidgets.panel(graphics, 6, LIST_TOP - 2, this.width - 12, listBottom - LIST_TOP + 4,
+                MTRWidgets.PANEL_BG, MTRWidgets.PANEL_BORDER);
+
+        List<MTRPayloads.FilterRow> rows = currentRows();
+        if (rows.isEmpty()) {
+            graphics.text(this.font, MTRComponent.translatable("mtr.filter.empty", "Waiting for the server…"),
+                    14, LIST_TOP + 6, MTRWidgets.TEXT_DIM);
+            return;
+        }
+
+        graphics.enableScissor(8, LIST_TOP, this.width - 8, listBottom);
+        int y = LIST_TOP;
+        for (int i = scroll; i < rows.size() && y < listBottom; i++) {
+            MTRPayloads.FilterRow row = rows.get(i);
+            boolean hovered = MTRWidgets.isOver(mouseX, mouseY, 8, y, this.width - 16, ROW_HEIGHT);
+            if (hovered) {
+                graphics.fill(8, y, this.width - 8, y + ROW_HEIGHT, 0x30FFFFFF);
+            }
+
+            graphics.text(this.font, Component.literal(row.enabled() ? "[✔]" : "[✖]"), 14, y + 6,
+                    row.enabled() ? MTRWidgets.TEXT_ON : MTRWidgets.TEXT_OFF);
+            graphics.text(this.font,
+                    MTRComponent.translatable("mtr.filter.event." + row.id(), row.defaultName()),
+                    44, y + 6, row.enabled() ? MTRWidgets.TEXT : MTRWidgets.TEXT_DIM);
+            graphics.text(this.font, Component.literal(row.id()),
+                    this.width - 20 - this.font.width(row.id()), y + 6, MTRWidgets.TEXT_DIM);
+
+            y += ROW_HEIGHT;
+        }
+        graphics.disableScissor();
+    }
+
+    // ── input ────────────────────────────────────────────────────────────────
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+        if (super.mouseClicked(event, doubled)) return true;
+
+        for (Tab tab : tabs()) {
+            if (MTRWidgets.isOver(event.x(), event.y(), tab.x(), 32, tab.width(), TAB_HEIGHT)) {
+                activeCategory = tab.category();
+                scroll = 0;
+                return true;
+            }
+        }
+
+        int listBottom = this.height - LIST_BOTTOM_MARGIN;
+        if (event.y() < LIST_TOP || event.y() >= listBottom) return false;
+
+        int index = scroll + (int) ((event.y() - LIST_TOP) / ROW_HEIGHT);
+        List<MTRPayloads.FilterRow> rows = currentRows();
+        if (index < 0 || index >= rows.size()) return false;
+
+        MTRPayloads.FilterRow row = rows.get(index);
+        MTRClientNetworking.setFilter(row.id(), !row.enabled());
+        return true;
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (scrollY == 0) return false;
+        scroll -= (int) Math.signum(scrollY) * 2;
+        clampScroll();
+        return true;
+    }
+}

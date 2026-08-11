@@ -14,17 +14,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 
-
-public final class WorldScopedStorage {
+public class WorldScopedStorage {
     private static final File CONFIG_DIR = FabricLoader.getInstance().getConfigDir().toFile();
     private static final String ROOT = "mtr";
     private static final String LEGACY_PROFILES = "mtr_profiles";
     private static final String LEGACY_BACKUPS = "mtr_backups";
     private static final String LEGACY_STACKTRACE = "mtr_stacktrace";
-
-    private WorldScopedStorage() {
-    }
-
 
     /** {@code config/mtr/<world-key>/} — everything recorded in the loaded world. */
     public static File getWorldDir() {

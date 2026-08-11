@@ -13,9 +13,7 @@ package ml.mypals.microtimingreplay.replay;
  * thread, one session at a time. Nesting is supported so a session can be entered from
  * inside another's scope without losing the outer one.
  */
-public final class ReplayContext {
-
-    private ReplayContext() {}
+public class ReplayContext {
 
     private static String current = null;
 
@@ -41,6 +39,17 @@ public final class ReplayContext {
         current = sessionId;
         try {
             return body.getAsInt();
+        } finally {
+            current = previous;
+        }
+    }
+
+    /** {@link #with} for work that produces an object. */
+    public static <T> T call(String sessionId, java.util.function.Supplier<T> body) {
+        String previous = current;
+        current = sessionId;
+        try {
+            return body.get();
         } finally {
             current = previous;
         }

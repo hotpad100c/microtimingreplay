@@ -81,7 +81,7 @@ public class PostGameEventEvent extends Vec3PosEvent {
 
     @Override
     public MutableComponent fillHoverText() {
-        MutableComponent text = Component.literal("PostGameEvent").withStyle(getColor(), ChatFormatting.BOLD)
+        MutableComponent text = Component.literal("PostGameEvent").withStyle(getColor())
                 .append(Component.literal(" \n@[\n").withStyle(ChatFormatting.GRAY))
                 .append(formatColoredVec3Block(getX(), getY(), getZ()))
                 .append(Component.literal("\n]").withStyle(ChatFormatting.GRAY));

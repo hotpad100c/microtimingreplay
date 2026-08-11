@@ -68,7 +68,7 @@ public class EntitySpawnEvent extends Vec3PosEvent {
     public MutableComponent fillHoverText() {
         String spawnLabel = despawn ? "[Despawn / Leave]" : "[Spawn / Enter]";
 
-        MutableComponent text = Component.literal("Entity " + spawnLabel + " [" + entityType + "]").withStyle(getColor(), ChatFormatting.BOLD)
+        MutableComponent text = Component.literal("Entity " + spawnLabel + " [" + entityType + "]").withStyle(getColor())
                 .append(Component.literal(" \n@[\n").withStyle(ChatFormatting.GRAY))
                 .append(formatColoredVec3Block(getX(), getY(), getZ()))
                 .append(Component.literal("\n]").withStyle(ChatFormatting.GRAY));

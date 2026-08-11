@@ -4,6 +4,7 @@ import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -22,9 +23,7 @@ import java.util.UUID;
  * subscribed to at most one at a time, so the stepping commands always have an
  * unambiguous target.
  */
-public final class ReplayManager {
-
-    private ReplayManager() {}
+public class ReplayManager {
 
     private static final Map<String, ReplaySession> sessions = new LinkedHashMap<>();
     private static final Map<UUID, String> subscriptions = new LinkedHashMap<>();
@@ -56,6 +55,7 @@ public final class ReplayManager {
         MTRState.beginReplayWorld(profile);
         ReplaySession session = new ReplaySession(profile);
         sessions.put(profile.getName(), session);
+        MTRNetworking.broadcastSessions(MicroTimingReplay.server);
         return session;
     }
 
@@ -71,6 +71,7 @@ public final class ReplayManager {
         PistonDisplayManager.forgetSession(profileName);
         StackTraceManager.forgetSession(profileName);
         subscriptions.values().removeIf(profileName::equals);
+        MTRNetworking.broadcastSessions(MicroTimingReplay.server);
     }
 
     public static void stopAll() {
@@ -142,6 +143,7 @@ public final class ReplayManager {
         if (session != null) {
             session.unsubscribe(player);
         }
+        MTRNetworking.sendSessions(player);
     }
 
     /** Drives every running session's auto-replay. */

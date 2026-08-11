@@ -113,7 +113,7 @@ public class StackTraceScreenGenerator {
         return new Input("stacktrace", textInput);
     }
 
-    private static @NonNull MutableComponent formatStackTraceLine(String rawLine) {
+    public static @NonNull MutableComponent formatStackTraceLine(String rawLine) {
         String raw = rawLine;
         String module = "";
         int lastSlash = raw.lastIndexOf('/');

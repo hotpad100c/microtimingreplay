@@ -5,6 +5,7 @@ import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.event.ItemTransferEvent;
 import ml.mypals.microtimingreplay.event.MTREvents;
 import ml.mypals.microtimingreplay.event.SelectionEventHandler;
+import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
 import ml.mypals.microtimingreplay.profile.WorldScopedStorage;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
@@ -35,6 +36,10 @@ public class MicroTimingReplay implements ModInitializer {
 		WorldBackupManager.init();
 		MTREvents.init();
 		MTRGameRules.init();
+
+		// Payload types must be registered on both sides; this entrypoint runs on both.
+		MTRNetworking.registerTypes();
+		MTRNetworking.registerServerHandlers();
 
 		CommandRegistrationCallback.EVENT.register(MTRCommand::register);
 		ServerLifecycleEvents.SERVER_STARTED.register(s -> {MicroTimingReplay.server = s;WorldScopedStorage.migrateCategoryLayout();});
