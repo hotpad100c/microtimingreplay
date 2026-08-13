@@ -10,14 +10,17 @@ import ml.mypals.microtimingreplay.client.MTRClientNetworking;
 import ml.mypals.microtimingreplay.client.camera.ViewportCamera;
 import ml.mypals.microtimingreplay.network.MTRPayloads;
 import ml.mypals.microtimingreplay.util.MTRComponent;
+import ml.mypals.microtimingreplay.util.MTRHelpText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.util.Util;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.WidgetTooltipHolder;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -31,6 +34,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -62,6 +66,11 @@ public class TimelineScreen extends Screen {
     private static final long DOUBLE_CLICK_MS = 250;
     private static final double DOUBLE_CLICK_SLOP = 4.0;
 
+    private static final int SEARCH_MATCH_BG = 0x40FFD24A;
+    private static final int SEARCH_CURRENT_BG = 0x80FFB000;
+    private static final int SEARCH_HEIGHT = 14;
+    private static final int SEARCH_WIDTH = 150;
+
     private static final int TOOLTIP_TRACE_LINES = 20;
     private static final double SUMMARY_MAX_SHARE = 0.5;
 
@@ -84,9 +93,16 @@ public class TimelineScreen extends Screen {
     private int detailHScroll = 0;
     private int summaryScroll = 0;
 
-    private enum Drag { NONE, TIMELINE_V, TIMELINE_H, DETAIL_V, DETAIL_H, SUMMARY_V, CAMERA_ORBIT, CAMERA_PAN }
+    private enum Drag { NONE, TIMELINE_V, TIMELINE_H, DETAIL_V, DETAIL_H, SUMMARY_V,
+        CAMERA_ORBIT, CAMERA_PAN, GRAB_TIMELINE, GRAB_DETAIL, GRAB_SUMMARY }
 
     private Drag dragging = Drag.NONE;
+
+    /**
+     * Left-over pixels of a right-drag. Vertical scrolling counts rows, so without carrying the
+     * remainder a slow drag would round to zero every frame and never move.
+     */
+    private double grabRemainder = 0;
 
     private final ViewportCamera camera = new ViewportCamera();
     private Vec3 lastServerFocus = null;
@@ -94,6 +110,16 @@ public class TimelineScreen extends Screen {
     private long lastViewportClickMillis = 0;
     private double lastViewportClickX = 0;
     private double lastViewportClickY = 0;
+
+    /** The manual overlay, drawn over everything and dismissed by any key or click. */
+    private boolean helpOpen = false;
+
+    private EditBox searchBox;
+    private List<Integer> matches = List.of();
+    private Set<Integer> matchSet = Set.of();
+    private int matchCursor = -1;
+    private List<String> searchIndex;
+    private int searchIndexRevision = -1;
 
     private final WidgetTooltipHolder stackTooltip = new WidgetTooltipHolder();
     /** Hit box of the call-stack header, stamped while drawing and read on click. */
@@ -156,6 +182,18 @@ public class TimelineScreen extends Screen {
         }).bounds(followButton.getWidth() + x + 4, y, 92, 16).build();
         addRenderableWidget(cameraFollowButton);
 
+        Button markersButton = Button.builder(markerLabel(), button -> {
+            MTRClientConfig.setHideMarkers(!MTRClientConfig.hideMarkers());
+            button.setMessage(markerLabel());
+        }).bounds(cameraFollowButton.getX() + cameraFollowButton.getWidth() + 4, y, 92, 16).build();
+        addRenderableWidget(markersButton);
+
+        addRenderableWidget(Button.builder(
+                MTRComponent.translatable("mtr.timeline.help", "Manual"),
+                button -> helpOpen = !helpOpen)
+                .bounds(markersButton.getX() + markersButton.getWidth() + 4, y, 60, 16)
+                .build());
+
         int bottom = this.height - 24;
         addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.timeline.backward", "◀ Back"),
                 b -> MTRClientNetworking.step(false)).bounds(8, bottom, 70, 18).build());
@@ -169,6 +207,13 @@ public class TimelineScreen extends Screen {
         if (MTRClientConfig.followCursor()) {
             scrollTo(ClientReplayState.cursorRow());
         }
+
+        if (searchBox != null) {
+            String query = searchBox.getValue();
+            searchBox = null;
+            openSearch();
+            searchBox.setValue(query);
+        }
     }
 
     private int addToolButton(Component label, int x, int y, int width, Runnable action) {
@@ -180,6 +225,12 @@ public class TimelineScreen extends Screen {
         return MTRComponent.translatable(
                 MTRClientConfig.followCursor() ? "mtr.timeline.follow_on" : "mtr.timeline.follow_off",
                 MTRClientConfig.followCursor() ? "Follow: on" : "Follow: off");
+    }
+
+    private Component markerLabel() {
+        return MTRComponent.translatable(
+                MTRClientConfig.hideMarkers() ? "mtr.timeline.markers_off" : "mtr.timeline.markers_on",
+                MTRClientConfig.hideMarkers() ? "Markers: off" : "Markers: on");
     }
 
     private Component cameraFollow() {
@@ -441,6 +492,21 @@ public class TimelineScreen extends Screen {
         return false;
     }
 
+    @Override
+    public void removed() {
+        // Esc or a screen switch mid-drag means mouseReleased never arrives; without this the
+        // player is left with no cursor.
+        endDrag();
+        super.removed();
+    }
+
+    private void endDrag() {
+        dragging = Drag.NONE;
+        grabRemainder = 0;
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(),
+                GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+    }
+
 
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
@@ -476,6 +542,17 @@ public class TimelineScreen extends Screen {
         drawDetails(graphics, mouseX, mouseY);
 
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+
+        if (helpOpen) {
+            drawHelp(graphics);
+        }
+
+        if (searching()) {
+            Component status = searchStatus();
+            graphics.text(this.font, status,
+                    searchBox.getX() - 6 - this.font.width(status), searchBox.getY() + 3,
+                    matches.isEmpty() ? MTRWidgets.TEXT_OFF : MTRWidgets.TEXT_ACCENT);
+        }
     }
 
     private void drawRows(GuiGraphicsExtractor graphics, int mouseX, int mouseY, int listBottom) {
@@ -506,6 +583,12 @@ public class TimelineScreen extends Screen {
             }
 
             boolean hovered = MTRWidgets.isOver(mouseX, mouseY, LIST_X + 1, y, contentRight - LIST_X, ROW_HEIGHT);
+            if (matchSet.contains(rowIndex)) {
+                boolean current = matchCursor >= 0 && matchCursor < matches.size()
+                        && matches.get(matchCursor) == rowIndex;
+                graphics.fill(LIST_X + 1, y, contentRight, y + ROW_HEIGHT,
+                        current ? SEARCH_CURRENT_BG : SEARCH_MATCH_BG);
+            }
             if (row.step() == selectedStep) {
                 graphics.fill(LIST_X + 1, y, contentRight, y + ROW_HEIGHT, MTRWidgets.CARD_BG_ACTIVE);
             }
@@ -583,11 +666,6 @@ public class TimelineScreen extends Screen {
 
     private record DetailLine(FormattedCharSequence text, int color) {}
 
-    /**
-     * Everything the detail column needs, prepared once per selection instead of per
-     * frame — wrapping the summary and colourising a deep call stack is far too much work
-     * to redo 60 times a second for a panel whose contents cannot change between frames.
-     */
     /**
      * @param summary      the event's own information, wrapped and pinned above the header
      * @param trace        the call stack, and the only thing that scrolls
@@ -802,10 +880,52 @@ public class TimelineScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+    public boolean keyPressed(KeyEvent event) {
+        boolean control = (event.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean shift = (event.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0;
+
+        if (helpOpen) {
+            // While the manual is up it owns the keyboard; any key puts it away.
+            helpOpen = false;
+            return true;
+        }
+
+        if (control && event.key() == GLFW.GLFW_KEY_F) {
+            openSearch();
+            return true;
+        }
+
+        if (searching()) {
+            switch (event.key()) {
+                case GLFW.GLFW_KEY_ESCAPE -> {
+                    // Swallow it: the bar closes, the screen stays.
+                    closeSearch();
+                    return true;
+                }
+                case GLFW.GLFW_KEY_ENTER, GLFW.GLFW_KEY_KP_ENTER, GLFW.GLFW_KEY_F4 -> {
+                    stepMatch(shift ? -1 : 1);
+                    return true;
+                }
+                default -> { }
+            }
+        }
+
+        return super.keyPressed(event);
+    }
+
+    @Override
+    public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubled) {
+        if (helpOpen) {
+            helpOpen = false;
+            return true;
+        }
         if (super.mouseClicked(event, doubled)) return true;
 
-        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE && beginCameraDrag(event)) {
+        if ((event.button() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE
+                || event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) && beginCameraDrag(event)) {
+            return true;
+        }
+        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT && beginGrab(event.x(), event.y())) {
             return true;
         }
         if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT && isViewportDoubleClick(event)) {
@@ -1066,7 +1186,7 @@ public class TimelineScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+    public boolean mouseDragged(@NonNull MouseButtonEvent event, double dragX, double dragY) {
         switch (dragging) {
             case TIMELINE_V -> applyTimelineVDrag(event.y());
             case TIMELINE_H -> applyTimelineHDrag(event.x());
@@ -1081,6 +1201,7 @@ public class TimelineScreen extends Screen {
                 camera.pan(dragX, dragY, viewportHeight(), fovDegrees());
                 applyCamera();
             }
+            case GRAB_TIMELINE, GRAB_DETAIL, GRAB_SUMMARY -> applyGrab(dragX, dragY);
             case NONE -> {
                 return super.mouseDragged(event, dragX, dragY);
             }
@@ -1089,16 +1210,230 @@ public class TimelineScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
+    public boolean mouseReleased(@NonNull MouseButtonEvent event) {
         if (dragging != Drag.NONE) {
-            dragging = Drag.NONE;
-
-            GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_CURSOR,GLFW.GLFW_CURSOR_NORMAL);
+            endDrag();
             return true;
         }
         return super.mouseReleased(event);
     }
 
+
+    // Manual---
+
+    private void drawHelp(GuiGraphicsExtractor graphics) {
+        List<MTRHelpText.Line> help = MTRHelpText.lines(MTRHelpText.TIMELINE_KEY, MTRHelpText.TIMELINE_FALLBACK);
+        if (help.isEmpty()) return;
+
+        int lineHeight = this.font.lineHeight + 2;
+        int widest = 0;
+        for (MTRHelpText.Line line : help) {
+            widest = Math.max(widest, this.font.width(line.text()));
+        }
+
+        Component hint = MTRComponent.translatable("mtr.help.close_hint", "Any key or click closes this");
+        widest = Math.max(widest, this.font.width(hint));
+
+        int gaps = 0;
+        for (int i = 1; i < help.size(); i++) {
+            if (help.get(i).heading()) gaps++;
+        }
+        gaps += 1;
+
+        int padding = 10;
+        int boxWidth = Math.min(this.width - 20, widest + padding * 2 + 8);
+        int boxHeight = (help.size() + gaps) * lineHeight + padding * 2;
+        int boxX = (this.width - boxWidth) / 2;
+        int boxY = Math.max(4, (this.height - boxHeight) / 2);
+
+        graphics.fill(0, 0, this.width, this.height, 0xA0000000);
+        MTRWidgets.panel(graphics, boxX, boxY, boxWidth, boxHeight,
+                MTRWidgets.PANEL_BG, MTRWidgets.PANEL_BORDER);
+
+        int y = boxY + padding;
+        for (int i = 0; i < help.size(); i++) {
+            MTRHelpText.Line line = help.get(i);
+            if (line.heading() && i > 0) y += lineHeight;
+            graphics.text(this.font, Component.literal(line.text()),
+                    boxX + padding + (line.heading() ? 0 : 8), y,
+                    line.heading() ? MTRWidgets.TEXT_ACCENT : MTRWidgets.TEXT);
+            y += lineHeight;
+        }
+        y += lineHeight;
+        graphics.text(this.font, hint, boxX + padding, y, MTRWidgets.TEXT_DIM);
+    }
+
+    // Grab-scrolling---
+
+    private boolean beginGrab(double mouseX, double mouseY) {
+        Drag target = grabRegionAt(mouseX, mouseY);
+        if (target == Drag.NONE) return false;
+
+        dragging = target;
+        grabRemainder = 0;
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(),
+                GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
+        return true;
+    }
+
+    private Drag grabRegionAt(double mouseX, double mouseY) {
+        if (mouseX >= LIST_X && mouseX < contentRight()
+                && mouseY >= LIST_TOP && mouseY < rowsBottom()) {
+            return Drag.GRAB_TIMELINE;
+        }
+        if (mouseX >= detailX() && mouseX < detailContentRight()) {
+            if (mouseY >= detailSummaryTop() && mouseY < detailSummaryBottom()) {
+                return Drag.GRAB_SUMMARY;
+            }
+            if (mouseY >= detailBodyTop() && mouseY < detailBodyBottom()) {
+                return Drag.GRAB_DETAIL;
+            }
+        }
+        return Drag.NONE;
+    }
+
+    private void applyGrab(double dragX, double dragY) {
+        grabRemainder += dragY;
+        int rows = (int) (grabRemainder / ROW_HEIGHT);
+        grabRemainder -= rows * ROW_HEIGHT;
+
+        switch (dragging) {
+            case GRAB_TIMELINE -> {
+                scroll -= rows;
+                hScroll -= (int) Math.round(dragX);
+                clampScroll();
+            }
+            case GRAB_DETAIL -> {
+                detailScroll -= rows;
+                detailHScroll -= (int) Math.round(dragX);
+                clampDetailScroll();
+            }
+            case GRAB_SUMMARY -> {
+                summaryScroll -= rows;
+                clampSummaryScroll();
+            }
+            default -> { }
+        }
+    }
+
+    // Search---
+
+    private boolean searching() {
+        return searchBox != null;
+    }
+
+    private void openSearch() {
+        if (searching()) {
+            setFocused(searchBox);
+            searchBox.setFocused(true);
+            return;
+        }
+
+        int width = Math.clamp(panelWidth - 24, 60, SEARCH_WIDTH);
+        int x = detailX() - V_SCROLLBAR - 4 - width;
+        searchBox = new EditBox(this.font, x, LIST_TOP, width, SEARCH_HEIGHT,
+                MTRComponent.translatable("mtr.timeline.search", "Search"));
+        searchBox.setMaxLength(128);
+        searchBox.setHint(MTRComponent.translatable("mtr.timeline.search_hint", "Search labels..."));
+        searchBox.setResponder(query -> {
+            recomputeMatches(query);
+            if (!matches.isEmpty()) goToMatch();
+        });
+        addRenderableWidget(searchBox);
+        setFocused(searchBox);
+        searchBox.setFocused(true);
+    }
+
+    private void closeSearch() {
+        if (!searching()) return;
+        removeWidget(searchBox);
+        searchBox = null;
+        matches = List.of();
+        matchSet = Set.of();
+        matchCursor = -1;
+        setFocused(null);
+    }
+
+    /**
+     * Lower-cased labels for matching. Resolving a {@link Component} per row per keystroke is
+     * what this avoids -- the list runs to thousands of rows.
+     */
+    private List<String> searchIndex() {
+        int revision = ClientReplayState.timelineRevision();
+        if (searchIndex == null || searchIndexRevision != revision) {
+            List<MTRPayloads.TimelineRow> rows = rows();
+            List<String> index = new ArrayList<>(rows.size());
+            for (MTRPayloads.TimelineRow row : rows) {
+                index.add(row.label().getString().toLowerCase(Locale.ROOT));
+            }
+            searchIndex = index;
+            searchIndexRevision = revision;
+        }
+        return searchIndex;
+    }
+
+    private void recomputeMatches(String query) {
+        String needle = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        if (needle.isEmpty()) {
+            matches = List.of();
+            matchSet = Set.of();
+            matchCursor = -1;
+            return;
+        }
+
+        List<String> index = searchIndex();
+        List<Integer> found = new ArrayList<>();
+        for (int i = 0; i < index.size(); i++) {
+            if (index.get(i).contains(needle)) found.add(i);
+        }
+        matches = found;
+        matchSet = new HashSet<>(found);
+        matchCursor = found.isEmpty() ? -1 : 0;
+    }
+
+    private void stepMatch(int delta) {
+        if (matches.isEmpty()) return;
+        matchCursor = Math.floorMod(matchCursor + delta, matches.size());
+        goToMatch();
+    }
+
+    private void goToMatch() {
+        if (matchCursor < 0 || matchCursor >= matches.size()) return;
+
+        int rowIndex = matches.get(matchCursor);
+        // A hit inside a collapsed subtree is not on screen; open its ancestors first.
+        revealRow(rowIndex);
+
+        List<MTRPayloads.TimelineRow> rows = rows();
+        if (rowIndex < rows.size()) {
+            selectStep(rows.get(rowIndex).step());
+        }
+        scrollTo(rowIndex);
+    }
+
+    private void revealRow(int rowIndex) {
+        List<MTRPayloads.TimelineRow> rows = rows();
+        if (rowIndex < 0 || rowIndex >= rows.size()) return;
+
+        int wantedDepth = rows.get(rowIndex).depth();
+        boolean changed = false;
+        for (int i = rowIndex - 1; i >= 0 && wantedDepth > 0; i--) {
+            int depth = rows.get(i).depth();
+            if (depth < wantedDepth) {
+                wantedDepth = depth;
+                changed |= collapsed.remove(i);
+            }
+        }
+        if (changed) rebuildVisible();
+    }
+
+    private Component searchStatus() {
+        if (searchBox == null || searchBox.getValue().trim().isEmpty()) return Component.empty();
+        if (matches.isEmpty()) {
+            return MTRComponent.translatable("mtr.timeline.search_none", "no match");
+        }
+        return Component.literal((matchCursor + 1) + " / " + matches.size());
+    }
 
     private boolean overViewport(double mouseX, double mouseY) {
         return mouseX >= listRight() && mouseX < detailX()

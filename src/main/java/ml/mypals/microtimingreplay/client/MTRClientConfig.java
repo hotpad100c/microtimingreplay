@@ -33,6 +33,7 @@ public class MTRClientConfig {
     private static boolean invertScroll = false;
     private static boolean followCursor = true;
     private static int panelHoldMillis = 0;
+    private static boolean hideMarkers = false;
 
     private static File configFile() {
         return new File(new File(FabricLoader.getInstance().getConfigDir().toFile(), "mtr"), "client.json");
@@ -104,6 +105,15 @@ public class MTRClientConfig {
         save();
     }
 
+    public static boolean hideMarkers() {
+        return hideMarkers;
+    }
+
+    public static void setHideMarkers(boolean value) {
+        hideMarkers = value;
+        save();
+    }
+
     public static void load() {
         File file = configFile();
         if (!file.exists()) {
@@ -121,6 +131,7 @@ public class MTRClientConfig {
             if (json.has("invertScroll")) invertScroll = json.get("invertScroll").getAsBoolean();
             if (json.has("followCursor")) followCursor = json.get("followCursor").getAsBoolean();
             if (json.has("panelHoldMillis")) panelHoldMillis = Math.clamp(json.get("panelHoldMillis").getAsInt(), 0, 2000);
+            if (json.has("hideMarkers")) hideMarkers = json.get("hideMarkers").getAsBoolean();
         } catch (Exception e) {
             MicroTimingReplay.LOGGER.error("Failed to read client.json, falling back to defaults", e);
         }
@@ -134,6 +145,7 @@ public class MTRClientConfig {
         root.addProperty("invertScroll", invertScroll);
         root.addProperty("followCursor", followCursor);
         root.addProperty("panelHoldMillis", panelHoldMillis);
+        root.addProperty("hideMarkers", hideMarkers);
 
         try {
             if (!file.getParentFile().exists()) {

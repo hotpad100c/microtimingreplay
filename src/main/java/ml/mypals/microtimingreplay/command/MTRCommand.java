@@ -23,6 +23,7 @@ import ml.mypals.microtimingreplay.replay.ReplaySession;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
 import ml.mypals.microtimingreplay.replay.dialog.TimelineScreenGenerator;
 import ml.mypals.microtimingreplay.util.MTRComponent;
+import ml.mypals.microtimingreplay.util.MTRHelpText;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -201,6 +202,8 @@ public class MTRCommand {
                         .then(Commands.argument("page", IntegerArgumentType.integer(0))
                             .executes(c -> resetFilterEvents(c, IntegerArgumentType.getInteger(c, "page"))))))
             )
+            .then(Commands.literal("help")
+                .executes(MTRCommand::printHelp))
             .then(Commands.literal("filter")
                 .executes(c -> openFilterScreen(c, 0))
                 .then(Commands.literal("screen")
@@ -642,6 +645,14 @@ public class MTRCommand {
         if (player != null && !MTRNetworking.openFilterScreen(player)) {
             EventFilterScreenGenerator.openFilterScreen(player, page);
         }
+        return 1;
+    }
+
+    private static int printHelp(CommandContext<CommandSourceStack> context) {
+        context.getSource().sendSuccess(
+                () -> MTRHelpText.asComponent(MTRHelpText.COMMANDS_KEY, MTRHelpText.COMMANDS_FALLBACK)
+                        .withStyle(ChatFormatting.GRAY),
+                false);
         return 1;
     }
 

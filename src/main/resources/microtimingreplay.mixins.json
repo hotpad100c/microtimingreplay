@@ -30,6 +30,7 @@
   "client": [
     "client.ClientEntityMixin",
     "client.ClientPacketListenerMixin",
-    "client.EntityRenderDispatcherMixin"
+    "client.EntityRenderDispatcherMixin",
+    "client.MarkerVisibilityMixin"
   ]
 }

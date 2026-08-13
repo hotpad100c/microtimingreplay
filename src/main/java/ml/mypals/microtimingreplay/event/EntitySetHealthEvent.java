@@ -49,8 +49,6 @@ public class EntitySetHealthEvent extends Vec3PosEvent {
 
     @Override
     public MutableComponent getScoreboardText() {
-        // Same as the collide-axis event: %.1f never worked through the translation
-        // formatter, so round here and pass strings.
         return MTRComponent.translatable(
                 "mtr.scoreboard.event.leaf." + TYPE.toLowerCase(Locale.ROOT),
                 "Set Health %s (%s -> %s)",

@@ -98,11 +98,8 @@ public class MTRPanelScreen extends Screen {
             cards.add(new Card(
                     MTRComponent.translatable("mtr.panel.amount", "Step: %d", MTRClientConfig.stepAmount()), 0, 0, 62, false,
                     () -> MTRClientConfig.cycleStepAmount(1), () -> MTRClientConfig.cycleStepAmount(-1)));
-            // Reads the server's flag, not a local one — the server owns this.
-            boolean following = ClientReplayState.cameraFollow();
-            cards.add(new Card(
-                    MTRComponent.translatable("mtr.panel.camera", "Camera"), 0, 0, 64, following,
-                    () -> MTRClientNetworking.setCameraFollow(!following), null));
+            cards.add(new Card(MTRComponent.translatable("mtr.panel.help", "Guide"), 0, 0, 56, false,
+                    () -> this.minecraft.setScreen(new HelpScreen(this)), null));
         } else {
             // Nothing to step through yet: offer the running replays to watch instead.
             for (String profile : ClientReplayState.runningSessions()) {
@@ -114,6 +111,8 @@ public class MTRPanelScreen extends Screen {
                     () -> this.minecraft.setScreen(new FilterScreen()), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.settings", "Settings"), 0, 0, 56, false,
                     () -> this.minecraft.setScreen(new ClientConfigScreen()), null));
+            cards.add(new Card(MTRComponent.translatable("mtr.panel.help", "Guide"), 0, 0, 56, false,
+                    () -> this.minecraft.setScreen(new HelpScreen(this)), null));
         }
 
         return position(cards);

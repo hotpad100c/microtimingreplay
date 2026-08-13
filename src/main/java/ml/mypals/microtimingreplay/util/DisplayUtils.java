@@ -33,6 +33,7 @@ public class DisplayUtils {
     public static String sessionTag(String sessionId) {
         return SESSION_TAG_PREFIX + sessionId;
     }
+    public static final String MARKER_NAME = "MTRMarker";
 
     public static void tagMarker(Entity entity) {
         entity.addTag("mtr_marker");
@@ -41,6 +42,14 @@ public class DisplayUtils {
         if (session != null) {
             entity.addTag(sessionTag(session));
         }
+        entity.setCustomName(Component.literal(MARKER_NAME));
+        entity.setCustomNameVisible(false);
+    }
+
+    public static boolean isMarker(Entity entity) {
+        if (entity == null) return false;
+        Component name = entity.getCustomName();
+        return name != null && MARKER_NAME.equals(name.getString());
     }
 
     public static BlockState getGlassState(ChatFormatting color) {
