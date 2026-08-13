@@ -37,41 +37,20 @@ public class TimelineScreen extends Screen {
     private static final int LIST_TOP = 44;
     private static final int LIST_BOTTOM_MARGIN = 30;
     private static final int INDENT = 9;
-
-    /**
-     * Column width at GUI scale 1, narrowing by {@link #WIDTH_PER_SCALE} for each step up.
-     * Coordinates here are GUI units, which already shrink as the scale rises, so without
-     * this the columns would eat the whole screen at scale 3 and up.
-     */
     private static final int WIDTH_AT_SCALE_1 = 400;
     private static final int WIDTH_PER_SCALE = 100;
-    /**
-     * Vanilla offers as many scale steps as the window can fit — {@code Window.calculateScale}
-     * keeps going while the framebuffer still divides into at least 320x240 — so a 4K
-     * display reaches scale 9 and the ramp above would go negative. Floor it.
-     */
     private static final int MIN_PANEL_WIDTH = 100;
     /** The gap between the two columns is reserved space, so never let them close it. */
-    private static final int MIN_MIDDLE_GAP = 100;
+    private static final int MIN_MIDDLE_GAP = 150;
 
     private static final int LIST_X = 0;
     private static final int EDGE_PAD = 0;
     private static final int V_SCROLLBAR = 5;
     private static final int H_SCROLLBAR = 4;
-    /** Width of the right-aligned "#n↗" jump hit box, which never scrolls sideways. */
-    private static final int JUMP_ZONE = 46;
-
-    /** How many pixels one notch of horizontal scroll moves the rows. */
+    private static final int JUMP_ZONE = 20;
     private static final int H_SCROLL_STEP = 16;
 
-    /** Lines of call stack the hover tooltip shows before it starts summarising. */
     private static final int TOOLTIP_TRACE_LINES = 20;
-
-    /**
-     * Largest share of the detail column the summary may take before it starts scrolling
-     * inside itself. {@code SetBlockEvent} alone reports a state diff plus nine flag bits,
-     * so without a ceiling it would push the call stack off the bottom.
-     */
     private static final double SUMMARY_MAX_SHARE = 0.5;
 
     private final Set<Integer> collapsed = new HashSet<>();
@@ -102,7 +81,7 @@ public class TimelineScreen extends Screen {
     private ScreenRectangle stackHeaderRect = ScreenRectangle.empty();
     private long copiedAtMillis = 0;
 
-    private Button followButton, cameraFollowButton;
+    private Button followButton;
 
     public TimelineScreen() {
         super(MTRComponent.translatable("mtr.timeline.title", "MTR Timeline"));
@@ -152,7 +131,7 @@ public class TimelineScreen extends Screen {
         }).bounds(x, y, 92, 16).build();
         addRenderableWidget(followButton);
 
-        cameraFollowButton = Button.builder(cameraFollow(), button -> {
+        Button cameraFollowButton = Button.builder(cameraFollow(), button -> {
             MTRClientNetworking.setCameraFollow(!ClientReplayState.cameraFollow());
             button.setMessage(cameraFollow());
         }).bounds(followButton.getWidth() + x + 4, y, 92, 16).build();
@@ -167,6 +146,10 @@ public class TimelineScreen extends Screen {
                 b -> this.minecraft.setScreen(new FilterScreen())).bounds(this.width - 154, bottom, 70, 18).build());
         addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.timeline.close", "Close"),
                 b -> onClose()).bounds(this.width - 80, bottom, 70, 18).build());
+
+        if (MTRClientConfig.followCursor()) {
+            scrollTo(ClientReplayState.cursorRow());
+        }
     }
 
     private int addToolButton(Component label, int x, int y, int width, Runnable action) {

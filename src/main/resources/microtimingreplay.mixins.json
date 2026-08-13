@@ -12,10 +12,12 @@
     "LivingEntityRecordingMixin",
     "MovingPistonTickMixin",
     "NeighborUpdaterMixin",
+    "PistonStructureResolverMixin",
     "PlayerTickMixin",
     "ServerLevelPhasesMixin",
     "ServerLevelQueuesMixin",
     "ServerPhasesMixin",
+    "ServerNetworkPacketMixin",
     "VibrationSystemTickerMixin",
     "client.DisplayMixin"
   ],

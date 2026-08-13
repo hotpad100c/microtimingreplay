@@ -22,7 +22,10 @@ public class MTREvents {
         MTREvent.register(BlockEntityCreationEvent.TYPE, BlockEntityCreationEvent::readNBT);
         MTREvent.register(EntityCollideAxisEvent.TYPE, EntityCollideAxisEvent::readNBT);
         MTREvent.register(EntitySetHealthEvent.TYPE, EntitySetHealthEvent::readNBT);
+        MTREvent.register(NetworkPacketEvent.TYPE, NetworkPacketEvent::readNBT);
+        MTREvent.register(PistonStructureEvent.TYPE, PistonStructureEvent::readNBT);
     }
+
 
     public static void init() {
     }

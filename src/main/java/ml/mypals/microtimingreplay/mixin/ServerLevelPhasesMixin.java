@@ -21,6 +21,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.PhaseEvent;
+import ml.mypals.microtimingreplay.event.PhaseType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -31,6 +32,7 @@ import net.minecraft.world.level.entity.EntityTickList;
 import java.util.function.Consumer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -44,46 +46,60 @@ public abstract class ServerLevelPhasesMixin {
     @Shadow
     public abstract MinecraftServer getServer();
 
+    // 这两个阶段是 HEAD/RETURN 成对注入的，push 和 pop 分处两个方法。开关和录制状态
+    // 都可能在两次注入之间被改掉，所以记下 HEAD 到底压没压栈，RETURN 只看这个标记。
+    @Unique
+    private boolean mtr$pushedBlockEventPhase;
+    @Unique
+    private boolean mtr$pushedScheduledTickPhase;
+
     @Inject(method = "runBlockEvents", at = @At("HEAD"))
     private void mtr$onRunBlockEventHead(CallbackInfo ci) {
-        if (MTRState.isRecording((ServerLevel) (Object) this)) {
+        mtr$pushedBlockEventPhase = MTRState.isRecording((ServerLevel) (Object) this)
+                && PhaseType.BLOCK_EVENT.enabled();
+        if (mtr$pushedBlockEventPhase) {
             MTRState.pushEvent(new PhaseEvent(
                 this.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                "BlockEventPhase"
+                PhaseType.BLOCK_EVENT
             ));
         }
     }
 
     @Inject(method = "runBlockEvents", at = @At("RETURN"))
     private void mtr$onRunBlockEventReturn(CallbackInfo ci) {
-        if (MTRState.isRecording((ServerLevel) (Object) this)) {
+        if (mtr$pushedBlockEventPhase) {
+            mtr$pushedBlockEventPhase = false;
             MTRState.popEvent();
         }
     }
 
     @Inject(method = "tick", at = @At(ordinal = 0, target = "Lnet/minecraft/world/ticks/LevelTicks;tick(JILjava/util/function/BiConsumer;)V", value = "INVOKE", shift = At.Shift.BEFORE))
     private void mtr$onDoBlockTileTickHead(BooleanSupplier haveTime, CallbackInfo ci) {
-        if (MTRState.isRecording((ServerLevel) (Object) this)) {
+        mtr$pushedScheduledTickPhase = MTRState.isRecording((ServerLevel) (Object) this)
+                && PhaseType.SCHEDULED_TICK.enabled();
+        if (mtr$pushedScheduledTickPhase) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                    "ScheduledTickPhase"
+                    PhaseType.SCHEDULED_TICK
             ));
         }
     }
 
     @Inject(method = "tick", at = @At(ordinal = 1, target = "Lnet/minecraft/world/ticks/LevelTicks;tick(JILjava/util/function/BiConsumer;)V", value = "INVOKE", shift = At.Shift.AFTER))
     private void mtr$onDoBlockTileTickReturn(BooleanSupplier haveTime, CallbackInfo ci) {
-        if (MTRState.isRecording((ServerLevel) (Object) this)) {
+        if (mtr$pushedScheduledTickPhase) {
+            mtr$pushedScheduledTickPhase = false;
             MTRState.popEvent();
         }
     }
 
     @WrapOperation(method = "tickChunk", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;tickPrecipitation(Lnet/minecraft/core/BlockPos;)V"))
     private void mtr$onIceAndSnow(ServerLevel instance, BlockPos pos, Operation<Void> original) {
-        if (MTRState.isRecording((ServerLevel) (Object) this) && !MTRState.getActiveProfile().outsideArea(pos, instance.dimension().identifier().toString())) {
+        if (MTRState.isRecording((ServerLevel) (Object) this) && PhaseType.ICE_AND_SNOW.enabled()
+                && !MTRState.getActiveProfile().outsideArea(pos, instance.dimension().identifier().toString())) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                    "IceAndSnowPhase"
+                    PhaseType.ICE_AND_SNOW
             ));
             try {
                 original.call(instance, pos);
@@ -96,10 +112,11 @@ public abstract class ServerLevelPhasesMixin {
     }
     @WrapOperation(method = "tickChunk", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;randomTick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/util/RandomSource;)V"))
     private void mtr$onRandomTickBlock(BlockState instance, ServerLevel serverLevel, BlockPos pos, RandomSource randomSource, Operation<Void> original) {
-        if (MTRState.isRecording((ServerLevel) (Object) this) && !MTRState.getActiveProfile().outsideArea(pos, ((ServerLevel) (Object) this) .dimension().identifier().toString())) {
+        if (MTRState.isRecording((ServerLevel) (Object) this) && PhaseType.RANDOM_TICK.enabled()
+                && !MTRState.getActiveProfile().outsideArea(pos, ((ServerLevel) (Object) this) .dimension().identifier().toString())) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                    "RandomTickPhase"
+                    PhaseType.RANDOM_TICK
             ));
             try {
                 original.call(instance, serverLevel, pos, randomSource);
@@ -175,10 +192,10 @@ public abstract class ServerLevelPhasesMixin {
 
     @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;tickBlockEntities()V"))
     private void mtr$onTickBlockEntity(ServerLevel instance, Operation<Void> original) {
-        if (MTRState.isRecording(instance)) {
+        if (MTRState.isRecording(instance) && PhaseType.BLOCK_ENTITY.enabled()) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                    "BlockEntityPhase"
+                    PhaseType.BLOCK_ENTITY
             ));
             try {
                 original.call(instance);
@@ -192,10 +209,10 @@ public abstract class ServerLevelPhasesMixin {
 
     @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/dimension/end/EnderDragonFight;tick()V"))
     private void mtr$onTickDragonFight(EnderDragonFight instance, Operation<Void> original) {
-        if (MTRState.isRecording(this.getServer().getLevel(Level.END))) {
+        if (MTRState.isRecording(this.getServer().getLevel(Level.END)) && PhaseType.DRAGON_FIGHT.enabled()) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                    "DragonFightPhase"
+                    PhaseType.DRAGON_FIGHT
             ));
             try {
                 original.call(instance);
@@ -210,10 +227,10 @@ public abstract class ServerLevelPhasesMixin {
 
     @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerChunkCache;tick(Ljava/util/function/BooleanSupplier;Z)V"))
     private void mtr$onTickChunk(ServerChunkCache instance, BooleanSupplier haveTime, boolean tickChunks, Operation<Void> original) {
-        if (MTRState.isRecording((ServerLevel) (Object) this)) {
+        if (MTRState.isRecording((ServerLevel) (Object) this) && PhaseType.CHUNK_TICK.enabled()) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                    "ChunkTickPhase"
+                    PhaseType.CHUNK_TICK
             ));
             try {
                 original.call(instance, haveTime, tickChunks);
@@ -227,10 +244,10 @@ public abstract class ServerLevelPhasesMixin {
 
     @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/entity/EntityTickList;forEach(Ljava/util/function/Consumer;)V"))
     private void mtr$onTickEntityListPhase(EntityTickList instance, Consumer<Entity> action, Operation<Void> original) {
-        if (MTRState.isRecording((ServerLevel) (Object) this)) {
+        if (MTRState.isRecording((ServerLevel) (Object) this) && PhaseType.ENTITY_TICK.enabled()) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
-                    "EntityTickPhase"
+                    PhaseType.ENTITY_TICK
             ));
             try {
                 original.call(instance, action);

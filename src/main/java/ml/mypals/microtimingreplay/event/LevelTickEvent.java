@@ -17,6 +17,10 @@ public class LevelTickEvent extends PhaseEvent {
         this.dimension = dimension != null ? dimension : "";
     }
 
+    public LevelTickEvent(long tick, PhaseType phase, @Nullable String dimension) {
+        this(tick, phase.phaseName(), dimension);
+    }
+
     public String getDimension() {
         return dimension;
     }

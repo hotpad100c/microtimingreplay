@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.config;
 
+import ml.mypals.microtimingreplay.event.PhaseType;
+
 import java.util.*;
 
 public class RecordingEventRegistry {
@@ -39,6 +41,7 @@ public class RecordingEventRegistry {
         register("moving_piston_despawn", "Block", "Moving Piston Despawn", true);
         register("block_entity_creation", "Block", "BlockEntity Creation", false);
         register("block_entity_tick", "Block", "Block Entity Tick", true);
+        register("piston_structure", "Block", "Piston Structure Resolve", false);
         // Container
         register("item_transfer", "Container", "Item Transfer", false);
 
@@ -66,8 +69,13 @@ public class RecordingEventRegistry {
         register("post_game_event", "GameEvent", "Post Game Event", true);
         register("received_game_event", "GameEvent", "Received Game Event", true);
 
+        // Network
+        register("network_packet", "Network", "Network Packet", false);
+
         // Phase
-        register("phase_player_tick", "Phase", "Player Tick Phase", true);
-        register("phase_level_tick", "Phase", "Level Tick Phase", true);
+        for (PhaseType phase : PhaseType.values()) {
+            register(phase.filterId(), "Phase", phase.defaultName(), phase.defaultEnabled());
+        }
     }
 }
+

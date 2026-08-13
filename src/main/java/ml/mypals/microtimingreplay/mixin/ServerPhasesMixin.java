@@ -1,5 +1,4 @@
 package ml.mypals.microtimingreplay.mixin;
-import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
@@ -7,6 +6,8 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.event.LevelTickEvent;
 import ml.mypals.microtimingreplay.event.PhaseEvent;
+import ml.mypals.microtimingreplay.event.PhaseType;
+import net.minecraft.network.PacketProcessor;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.players.PlayerList;
@@ -24,19 +25,35 @@ public abstract class ServerPhasesMixin {
 
     @Shadow
     public abstract ServerLevel overworld();
-
+    @WrapOperation(method = "processPacketsAndTick", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/network/PacketProcessor;processQueuedPackets()V"))
+    private void mtr$onProcessQueuedPackets(PacketProcessor instance, Operation<Void> original) {
+        if (MTRState.isRecording(null) && PhaseType.PACKET_PROCESS.enabled()) {
+            MTRState.pushEvent(new PhaseEvent(
+                    this.tickCount - MTRState.getRecordStartTick(),
+                    PhaseType.PACKET_PROCESS
+            ));
+            try {
+                original.call(instance);
+            } finally {
+                MTRState.popEvent();
+            }
+        } else {
+            original.call(instance);
+        }
+    }
     @WrapOperation(method = "tickChildren", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/server/level/ServerLevel;tick(Ljava/util/function/BooleanSupplier;)V"))
     private void mtr$onTickLevelPhase(ServerLevel level, BooleanSupplier hasTimeLeft, Operation<Void> original) {
         if (MTRState.isRecording(level)) {
-            if (!RecordingFilterConfig.isEnabled("phase_level_tick")) {
+            if (!PhaseType.LEVEL_TICK.enabled()) {
                 original.call(level, hasTimeLeft);
                 return;
             }
             String dim = level.dimension().identifier().toString();
             MTRState.pushEvent(new LevelTickEvent(
                     this.tickCount - MTRState.getRecordStartTick(),
-                    "LevelTickPhase",
+                    PhaseType.LEVEL_TICK,
                     dim
             ));
             try {
@@ -50,10 +67,10 @@ public abstract class ServerPhasesMixin {
     }
     @WrapMethod(method = "waitUntilNextTick")
     private void mtr$onTickAsyncTaskPhase(Operation<Void> original) {
-        if (MTRState.isRecording(null)) {
+        if (MTRState.isRecording(null) && PhaseType.ASYNC_TASK.enabled()) {
             MTRState.pushEvent(new PhaseEvent(
                     this.tickCount - MTRState.getRecordStartTick(),
-                    "AsyncTaskPhase"
+                    PhaseType.ASYNC_TASK
             ));
             try {
                 original.call();
@@ -69,13 +86,13 @@ public abstract class ServerPhasesMixin {
             target = "Lnet/minecraft/server/MinecraftServer;tickConnection()V"))
     private void mtr$onTickPlayerPhase(MinecraftServer instance, Operation<Void> original) {
         if (MTRState.isRecording(null)) {
-            if (!RecordingFilterConfig.isEnabled("phase_player_tick")) {
+            if (!PhaseType.PLAYER_TICK.enabled()) {
                 original.call(instance);
                 return;
             }
             MTRState.pushEvent(new PhaseEvent(
                     this.tickCount - MTRState.getRecordStartTick(),
-                    "PlayerTickPhase"
+                    PhaseType.PLAYER_TICK
             ));
             try {
                 original.call(instance);

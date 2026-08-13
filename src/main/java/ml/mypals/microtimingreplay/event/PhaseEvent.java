@@ -20,6 +20,10 @@ public class PhaseEvent extends MTREvent {
         this.phaseName = phaseName;
     }
 
+    public PhaseEvent(long tick, PhaseType phase) {
+        this(tick, phase.phaseName());
+    }
+
     public String getPhaseName() {
         return phaseName;
     }
