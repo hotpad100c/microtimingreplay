@@ -58,7 +58,7 @@ public abstract class ServerLevelQueuesMixin {
                             entity.getX(), entity.getY(), entity.getZ(),
                             entity.getYRot(), entity.getXRot(),
                             false,
-                            dim
+                            dim,entity.getId()
                     );
 
                     MTRState.recordStep(event);

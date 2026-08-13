@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.network;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.config.RecordMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -119,14 +120,14 @@ public class MTRPayloads {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record SetFilterC2S(String eventId, boolean enabled) implements CustomPacketPayload {
+    public record SetFilterC2S(String eventId, RecordMode mode) implements CustomPacketPayload {
         public static final Type<SetFilterC2S> TYPE = MTRPayloads.payloadType("set_filter_c2s");
         public static final StreamCodec<RegistryFriendlyByteBuf, SetFilterC2S> CODEC = StreamCodec.of(
                 (buf, payload) -> {
                     buf.writeUtf(payload.eventId(), 128);
-                    buf.writeBoolean(payload.enabled());
+                    buf.writeByte(payload.mode().toWire());
                 },
-                buf -> new SetFilterC2S(buf.readUtf(128), buf.readBoolean()));
+                buf -> new SetFilterC2S(buf.readUtf(128), RecordMode.fromWire(buf.readByte())));
 
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
@@ -314,7 +315,15 @@ public class MTRPayloads {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record FilterRow(String id, String category, String defaultName, boolean enabled) {}
+    /**
+     * @param option true for the plain on/off replay switches, which only flip between
+     *               {@link RecordMode#OFF} and {@link RecordMode#ALL}
+     */
+    public record FilterRow(String id, String category, String defaultName, RecordMode mode, boolean option) {
+        public boolean enabled() {
+            return mode.records();
+        }
+    }
 
     /** The server's authoritative view of {@code event_filter.json}. */
     public record FilterS2C(List<FilterRow> rows) implements CustomPacketPayload {
@@ -326,15 +335,16 @@ public class MTRPayloads {
                         buf.writeUtf(row.id(), 128);
                         buf.writeUtf(row.category(), 128);
                         buf.writeUtf(row.defaultName(), 256);
-                        buf.writeBoolean(row.enabled());
+                        buf.writeByte(row.mode().toWire());
+                        buf.writeBoolean(row.option());
                     }
                 },
                 buf -> {
                     int count = buf.readVarInt();
                     List<FilterRow> rows = new ArrayList<>(count);
                     for (int i = 0; i < count; i++) {
-                        rows.add(new FilterRow(buf.readUtf(128), buf.readUtf(128),
-                                buf.readUtf(256), buf.readBoolean()));
+                        rows.add(new FilterRow(buf.readUtf(128), buf.readUtf(128), buf.readUtf(256),
+                                RecordMode.fromWire(buf.readByte()), buf.readBoolean()));
                     }
                     return new FilterS2C(rows);
                 });

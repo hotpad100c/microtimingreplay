@@ -48,7 +48,7 @@ public abstract class EntityRecordingMixin {
                         entity.getX(), entity.getY(), entity.getZ(),
                         entity.getYRot(), entity.getXRot(),
                         true, // despawn
-                        dim
+                        dim,entity.getId()
                     );
 
                     MTRState.recordStep(event);

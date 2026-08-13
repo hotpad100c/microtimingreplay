@@ -1,5 +1,6 @@
 package ml.mypals.microtimingreplay.replay.dialog;
 
+import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.config.RecordingEventRegistry;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.util.MTRComponent;
@@ -58,15 +59,16 @@ public class EventFilterScreenGenerator {
         List<ActionButton> buttons = new ArrayList<>();
 
         for (RecordingEventRegistry.EventEntry entry : pageEntries) {
-            boolean enabled = RecordingFilterConfig.isEnabled(entry.id());
-            ChatFormatting statusColor = enabled ? ChatFormatting.GREEN : ChatFormatting.RED;
-            String prefix = enabled ? "[✔] " : "[✖] ";
+            RecordMode mode = RecordingFilterConfig.mode(entry.id());
+            boolean enabled = mode.records();
+            ChatFormatting statusColor = modeColor(mode);
 
             Component eventNameComp = MTRComponent.translatable("mtr.filter.event." + entry.id(), entry.defaultName());
             Component categoryComp = MTRComponent.translatable("mtr.filter.category." + entry.category().toLowerCase(), entry.category());
 
-            MutableComponent label = Component.literal(prefix)
-                    .withStyle(statusColor, ChatFormatting.BOLD)
+            MutableComponent label = Component.literal("[").withStyle(ChatFormatting.DARK_GRAY)
+                    .append(modeLabel(entry, mode).copy().withStyle(statusColor, ChatFormatting.BOLD))
+                    .append(Component.literal("] ").withStyle(ChatFormatting.DARK_GRAY))
                     .append(eventNameComp.copy().withStyle(enabled ? ChatFormatting.WHITE : ChatFormatting.GRAY))
                     .append(Component.literal(" [").withStyle(ChatFormatting.DARK_GRAY))
                     .append(categoryComp.copy().withStyle(ChatFormatting.DARK_GRAY))
@@ -129,6 +131,28 @@ public class EventFilterScreenGenerator {
                 Optional.empty(),
                 1
         );
+    }
+
+    /** Options read as a plain switch; events name which of the three modes they are in. */
+    private static Component modeLabel(RecordingEventRegistry.EventEntry entry, RecordMode mode) {
+        if (entry.isOption()) {
+            return mode.records()
+                    ? MTRComponent.translatable("mtr.filter.mode.on", "On")
+                    : MTRComponent.translatable("mtr.filter.mode.disabled", "Off");
+        }
+        return switch (mode) {
+            case OFF -> MTRComponent.translatable("mtr.filter.mode.off", "DontRecord");
+            case NON_EMPTY -> MTRComponent.translatable("mtr.filter.mode.non_empty", "NotEmpty");
+            case ALL -> MTRComponent.translatable("mtr.filter.mode.all", "Everything");
+        };
+    }
+
+    private static ChatFormatting modeColor(RecordMode mode) {
+        return switch (mode) {
+            case OFF -> ChatFormatting.RED;
+            case NON_EMPTY -> ChatFormatting.YELLOW;
+            case ALL -> ChatFormatting.GREEN;
+        };
     }
 
     private static ActionButton actionBtn(Component label, String command, int width) {

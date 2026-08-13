@@ -39,11 +39,7 @@ public class EntitySpawnEvent extends Vec3PosEvent {
         this.EID = eid;
     }
 
-    public EntitySpawnEvent(long tick, String entityUuid, String entityType, CompoundTag nbt,
-                            double x, double y, double z, float yaw, float pitch, boolean despawn,
-                            String dimension) {
-        this(tick, entityUuid, entityType, nbt, x, y, z, yaw, pitch, despawn, dimension, -1);
-    }
+
 
     public String getEntityUuid() { return entityUuid; }
     public String getEntityType() { return entityType; }

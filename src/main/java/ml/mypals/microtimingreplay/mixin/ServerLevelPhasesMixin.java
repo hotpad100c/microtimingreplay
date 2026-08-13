@@ -154,7 +154,8 @@ public abstract class ServerLevelPhasesMixin {
                         currentTick, uuid, entityTypeKey,
                         PlayerProxy.snapshotNbt(entity, level.registryAccess()),
                         entity.getX(), entity.getY(), entity.getZ(),
-                        entity.getYRot(), entity.getXRot(), false,dim
+                        entity.getYRot(), entity.getXRot(), false,dim,
+                        entity.getId()
                     ));
                 } else if (wasInside && !isInside) {
                     // Entity left recorded area
@@ -162,7 +163,8 @@ public abstract class ServerLevelPhasesMixin {
                         currentTick, uuid, entityTypeKey,
                         PlayerProxy.snapshotNbt(entity, level.registryAccess()),
                         entity.getX(), entity.getY(), entity.getZ(),
-                        entity.getYRot(), entity.getXRot(), true,dim
+                        entity.getYRot(), entity.getXRot(), true,dim,
+                        entity.getId()
                     ));
                 }
 

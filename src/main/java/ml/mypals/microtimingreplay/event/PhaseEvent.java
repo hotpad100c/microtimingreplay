@@ -1,7 +1,6 @@
 package ml.mypals.microtimingreplay.event;
 
 
-import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
@@ -29,8 +28,9 @@ public class PhaseEvent extends MTREvent {
     }
 
     @Override
-    public boolean saveEvenWithoutAction(MinecraftServer server) {
-        return !server.getGameRules().get(MTRGameRules.SKIP_EMPTY_PHASE);
+    public String filterId() {
+        PhaseType type = PhaseType.byPhaseName(phaseName);
+        return type == null ? null : type.filterId();
     }
 
     @Override

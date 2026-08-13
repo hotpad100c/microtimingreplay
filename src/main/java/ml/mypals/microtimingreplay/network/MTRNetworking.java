@@ -147,7 +147,7 @@ public class MTRNetworking {
             if (!isAllowed(context.player())) return;
             if (RecordingEventRegistry.get(payload.eventId()) == null) return;
 
-            RecordingFilterConfig.setEnabled(payload.eventId(), payload.enabled());
+            RecordingFilterConfig.setMode(payload.eventId(), payload.mode());
             broadcastFilter(context.server());
         });
 
@@ -265,7 +265,7 @@ public class MTRNetworking {
         List<MTRPayloads.FilterRow> rows = new ArrayList<>();
         for (RecordingEventRegistry.EventEntry entry : RecordingEventRegistry.getAll()) {
             rows.add(new MTRPayloads.FilterRow(entry.id(), entry.category(), entry.defaultName(),
-                    RecordingFilterConfig.isEnabled(entry.id())));
+                    RecordingFilterConfig.mode(entry.id()), entry.isOption()));
         }
         ServerPlayNetworking.send(player, new MTRPayloads.FilterS2C(rows));
     }

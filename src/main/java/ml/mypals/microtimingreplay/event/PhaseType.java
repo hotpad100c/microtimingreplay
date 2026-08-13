@@ -1,33 +1,34 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 
 import java.util.Locale;
 
 public enum PhaseType {
-    PACKET_PROCESS("PacketProcessPhase", "Packet Process Phase", true),
-    ASYNC_TASK("AsyncTaskPhase", "Async Task Phase", true),
-    LEVEL_TICK("LevelTickPhase", "Level Tick Phase", true),
-    PLAYER_TICK("PlayerTickPhase", "Player Tick Phase", true),
-    CHUNK_TICK("ChunkTickPhase", "Chunk Tick Phase", true),
-    BLOCK_EVENT("BlockEventPhase", "Block Event Phase", true),
-    SCHEDULED_TICK("ScheduledTickPhase", "Scheduled Tick Phase", true),
-    RANDOM_TICK("RandomTickPhase", "Random Tick Phase", true),
-    ICE_AND_SNOW("IceAndSnowPhase", "Ice And Snow Phase", true),
-    BLOCK_ENTITY("BlockEntityPhase", "Block Entity Phase", true),
-    ENTITY_TICK("EntityTickPhase", "Entity Tick Phase", true),
-    DRAGON_FIGHT("DragonFightPhase", "Dragon Fight Phase", true);
+    PACKET_PROCESS("PacketProcessPhase", "Packet Process Phase", RecordMode.NON_EMPTY),
+    ASYNC_TASK("AsyncTaskPhase", "Async Task Phase", RecordMode.NON_EMPTY),
+    LEVEL_TICK("LevelTickPhase", "Level Tick Phase", RecordMode.NON_EMPTY),
+    PLAYER_TICK("PlayerTickPhase", "Player Tick Phase", RecordMode.NON_EMPTY),
+    CHUNK_TICK("ChunkTickPhase", "Chunk Tick Phase", RecordMode.NON_EMPTY),
+    BLOCK_EVENT("BlockEventPhase", "Block Event Phase", RecordMode.NON_EMPTY),
+    SCHEDULED_TICK("ScheduledTickPhase", "Scheduled Tick Phase", RecordMode.NON_EMPTY),
+    RANDOM_TICK("RandomTickPhase", "Random Tick Phase", RecordMode.NON_EMPTY),
+    ICE_AND_SNOW("IceAndSnowPhase", "Ice And Snow Phase", RecordMode.NON_EMPTY),
+    BLOCK_ENTITY("BlockEntityPhase", "Block Entity Phase", RecordMode.NON_EMPTY),
+    ENTITY_TICK("EntityTickPhase", "Entity Tick Phase", RecordMode.NON_EMPTY),
+    DRAGON_FIGHT("DragonFightPhase", "Dragon Fight Phase", RecordMode.NON_EMPTY);
 
     private final String phaseName;
     private final String filterId;
     private final String defaultName;
-    private final boolean defaultEnabled;
+    private final RecordMode defaultMode;
 
-    PhaseType(String phaseName, String defaultName, boolean defaultEnabled) {
+    PhaseType(String phaseName, String defaultName, RecordMode defaultMode) {
         this.phaseName = phaseName;
         this.filterId = "phase_" + name().toLowerCase(Locale.ROOT);
         this.defaultName = defaultName;
-        this.defaultEnabled = defaultEnabled;
+        this.defaultMode = defaultMode;
     }
 
     public String phaseName() {
@@ -42,8 +43,8 @@ public enum PhaseType {
         return defaultName;
     }
 
-    public boolean defaultEnabled() {
-        return defaultEnabled;
+    public RecordMode defaultMode() {
+        return defaultMode;
     }
 
     public boolean enabled() {

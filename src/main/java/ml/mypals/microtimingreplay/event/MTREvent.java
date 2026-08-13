@@ -2,6 +2,8 @@ package ml.mypals.microtimingreplay.event;
 
 import net.minecraft.nbt.StringTag;
 
+import ml.mypals.microtimingreplay.config.RecordMode;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.util.DisplayUtils;
 import net.minecraft.ChatFormatting;
@@ -94,9 +96,20 @@ public abstract class MTREvent {
     public void removeChild(MTREvent event) {
         children.remove(event);
     }
+    public String filterId() {
+        return null;
+    }
 
+    /**
+     * Whether to keep this event when it ended up with no children.
+     *
+     * <p>Only reached for events that went through {@code pushEvent}; leaf events are recorded
+     * outright and never come here, which is why picking {@link RecordMode#NON_EMPTY} for a
+     * leaf behaves the same as {@link RecordMode#ALL}.
+     */
     public boolean saveEvenWithoutAction(MinecraftServer server) {
-        return true;
+        String id = filterId();
+        return id == null || RecordingFilterConfig.mode(id) == RecordMode.ALL;
     }
 
     public static final float MARKER_SCALE = 1.005f;

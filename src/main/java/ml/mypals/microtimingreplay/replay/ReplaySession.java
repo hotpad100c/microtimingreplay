@@ -3,7 +3,7 @@ package ml.mypals.microtimingreplay.replay;
 import ml.mypals.microtimingreplay.event.MovingPistonEvent;
 import ml.mypals.microtimingreplay.event.MovingPistonTickEvent;
 
-import ml.mypals.microtimingreplay.config.MTRGameRules;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.*;
 import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
@@ -476,7 +476,7 @@ public class ReplaySession {
         MTREvent exitEvent = null;
         MTREvent leafEvent = null;
 
-        if (!level.getServer().getGameRules().get(MTRGameRules.SKIP_DELTA_CHANGES) && startCursor != actionCursor) {
+        if (!RecordingFilterConfig.optionEnabled("skip_delta_changes") && startCursor != actionCursor) {
             int min = Math.min(startCursor, actionCursor);
             int max = Math.max(startCursor, actionCursor);
             for (int i = min; i < max; i++) {
@@ -648,11 +648,11 @@ public class ReplaySession {
     }
 
     private static boolean isValidStep(ServerLevel level, ReplayAction action) {
-        if (level.getServer().getGameRules().get(MTRGameRules.STEP_IGNORE_UPDATES)) {
+        if (RecordingFilterConfig.optionEnabled("step_ignore_updates")) {
             if (action.event instanceof UpdateEvent)
                 return false;
         }
-        if (level.getServer().getGameRules().get(MTRGameRules.STEP_IGNORE_EXITING)) {
+        if (RecordingFilterConfig.optionEnabled("step_ignore_exiting")) {
             return action.type != ActionType.EXIT;
         }
         return true;

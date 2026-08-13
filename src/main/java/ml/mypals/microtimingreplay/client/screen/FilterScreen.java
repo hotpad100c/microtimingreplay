@@ -2,6 +2,7 @@ package ml.mypals.microtimingreplay.client.screen;
 
 import ml.mypals.microtimingreplay.client.ClientReplayState;
 import ml.mypals.microtimingreplay.client.MTRClientNetworking;
+import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.network.MTRPayloads;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -122,6 +123,8 @@ public class FilterScreen extends Screen {
         }
 
         graphics.enableScissor(8, LIST_TOP, this.width - 8, listBottom);
+        // The mode column is words now, and how wide those words are depends on the language.
+        int nameX = 14 + modeColumnWidth() + 10;
         int y = LIST_TOP;
         for (int i = scroll; i < rows.size() && y < listBottom; i++) {
             MTRPayloads.FilterRow row = rows.get(i);
@@ -130,11 +133,10 @@ public class FilterScreen extends Screen {
                 graphics.fill(8, y, this.width - 8, y + ROW_HEIGHT, 0x30FFFFFF);
             }
 
-            graphics.text(this.font, Component.literal(row.enabled() ? "[✔]" : "[✖]"), 14, y + 6,
-                    row.enabled() ? MTRWidgets.TEXT_ON : MTRWidgets.TEXT_OFF);
+            graphics.text(this.font, modeLabel(row.mode(), row.option()), 14, y + 6, modeColor(row.mode()));
             graphics.text(this.font,
                     MTRComponent.translatable("mtr.filter.event." + row.id(), row.defaultName()),
-                    44, y + 6, row.enabled() ? MTRWidgets.TEXT : MTRWidgets.TEXT_DIM);
+                    nameX, y + 6, row.enabled() ? MTRWidgets.TEXT : MTRWidgets.TEXT_DIM);
             graphics.text(this.font, Component.literal(row.id()),
                     this.width - 20 - this.font.width(row.id()), y + 6, MTRWidgets.TEXT_DIM);
 
@@ -165,8 +167,49 @@ public class FilterScreen extends Screen {
         if (index < 0 || index >= rows.size()) return false;
 
         MTRPayloads.FilterRow row = rows.get(index);
-        MTRClientNetworking.setFilter(row.id(), !row.enabled());
+        MTRClientNetworking.setFilter(row.id(), nextMode(row));
         return true;
+    }
+
+    /** Options are plain switches; events walk off → non-empty → all. */
+    private static RecordMode nextMode(MTRPayloads.FilterRow row) {
+        if (row.option()) {
+            return row.mode().records() ? RecordMode.OFF : RecordMode.ALL;
+        }
+        return row.mode().next();
+    }
+
+    /** Widest the mode column can get, so the name column starts clear of it in any language. */
+    private int modeColumnWidth() {
+        int width = 0;
+        for (RecordMode mode : RecordMode.values()) {
+            width = Math.max(width, this.font.width(modeLabel(mode, false)));
+        }
+        width = Math.max(width, this.font.width(modeLabel(RecordMode.ALL, true)));
+        width = Math.max(width, this.font.width(modeLabel(RecordMode.OFF, true)));
+        return width;
+    }
+
+    /** Options read as a plain switch; events name which of the three modes they are in. */
+    static Component modeLabel(RecordMode mode, boolean option) {
+        if (option) {
+            return mode.records()
+                    ? MTRComponent.translatable("mtr.filter.mode.on", "On")
+                    : MTRComponent.translatable("mtr.filter.mode.disabled", "Off");
+        }
+        return switch (mode) {
+            case OFF -> MTRComponent.translatable("mtr.filter.mode.off", "DontRecord");
+            case NON_EMPTY -> MTRComponent.translatable("mtr.filter.mode.non_empty", "NotEmpty");
+            case ALL -> MTRComponent.translatable("mtr.filter.mode.all", "Everything");
+        };
+    }
+
+    private static int modeColor(RecordMode mode) {
+        return switch (mode) {
+            case OFF -> MTRWidgets.TEXT_OFF;
+            case NON_EMPTY -> MTRWidgets.TEXT_ACCENT;
+            case ALL -> MTRWidgets.TEXT_ON;
+        };
     }
 
     @Override

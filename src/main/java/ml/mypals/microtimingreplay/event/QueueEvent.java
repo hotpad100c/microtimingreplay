@@ -1,7 +1,6 @@
 package ml.mypals.microtimingreplay.event;
 
 
-import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -26,8 +25,14 @@ public class QueueEvent extends BlockPosEvent {
     }
 
     @Override
-    public boolean saveEvenWithoutAction(MinecraftServer server) {
-        return !server.getGameRules().get(MTRGameRules.SKIP_EMPTY_QUEUE);
+    public String filterId() {
+        // The mixins name the queue; map it back to the filter entry that gated it.
+        return switch (queueName == null ? "" : queueName) {
+            case "ExecuteBlockEvent" -> "execute_block_event";
+            case "ExecuteBlockTick" -> "block_tick";
+            case "ExecuteFluidTick" -> "fluid_tick";
+            default -> null;
+        };
     }
 
 

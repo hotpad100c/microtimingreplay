@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
+import java.util.Locale;
 import java.util.UUID;
 
 public class EntityCollideAxisEvent extends Vec3PosEvent {
@@ -72,8 +73,16 @@ public class EntityCollideAxisEvent extends Vec3PosEvent {
 
     @Override
     public MutableComponent getScoreboardText() {
-        String text = String.format("[%s-Axis] (%.2f -> %.2f)", axis, getOldX(), getX());
-        return Component.literal(text);
+        // Vanilla's translation formatter only understands %s, so the numbers are rounded
+        // here and handed over as strings rather than left to a %.2f in the language file.
+        return MTRComponent.translatable(
+                "mtr.scoreboard.event.leaf.entitycollideaxis",
+                "[%s-Axis] %s (%s -> %s)",
+                axis, entityType, format2(getOldX()), format2(getX()));
+    }
+
+    private static String format2(double value) {
+        return String.format(Locale.ROOT, "%.2f", value);
     }
 
     @Override

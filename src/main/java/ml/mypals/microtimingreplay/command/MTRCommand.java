@@ -9,6 +9,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import ml.mypals.microtimingreplay.MTRState;
+import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.replay.dialog.EventFilterScreenGenerator;
 import ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator;
@@ -70,6 +71,10 @@ public class MTRCommand {
                     RecordingEventRegistry.getAll()
                             .stream().map(RecordingEventRegistry.EventEntry::id),
                     builder);
+
+    public static final SuggestionProvider<CommandSourceStack> RECORD_MODE_SUGGESTION =
+            (context, builder) -> SharedSuggestionProvider.suggest(
+                    java.util.Arrays.stream(RecordMode.values()).map(RecordMode::id), builder);
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext registryAccess, Commands.CommandSelection environment) {
         dispatcher.register(Commands.literal("mtr")
@@ -186,6 +191,11 @@ public class MTRCommand {
                             .executes(c -> toggleFilterEvent(c, StringArgumentType.getString(c, "eventId"), 0))
                             .then(Commands.argument("page", IntegerArgumentType.integer(0))
                                 .executes(c -> toggleFilterEvent(c, StringArgumentType.getString(c, "eventId"), IntegerArgumentType.getInteger(c, "page"))))))
+                    .then(Commands.literal("set")
+                        .then(Commands.argument("eventId", StringArgumentType.word()).suggests(EVENT_FILTER_SUGGESTION)
+                            .then(Commands.argument("mode", StringArgumentType.word()).suggests(RECORD_MODE_SUGGESTION)
+                                .executes(c -> setFilterEvent(c, StringArgumentType.getString(c, "eventId"),
+                                        StringArgumentType.getString(c, "mode"), 0)))))
                     .then(Commands.literal("reset")
                         .executes(c -> resetFilterEvents(c, 0))
                         .then(Commands.argument("page", IntegerArgumentType.integer(0))
@@ -202,6 +212,11 @@ public class MTRCommand {
                         .executes(c -> toggleFilterEvent(c, StringArgumentType.getString(c, "eventId"), 0))
                         .then(Commands.argument("page", IntegerArgumentType.integer(0))
                             .executes(c -> toggleFilterEvent(c, StringArgumentType.getString(c, "eventId"), IntegerArgumentType.getInteger(c, "page"))))))
+                .then(Commands.literal("set")
+                    .then(Commands.argument("eventId", StringArgumentType.word()).suggests(EVENT_FILTER_SUGGESTION)
+                        .then(Commands.argument("mode", StringArgumentType.word()).suggests(RECORD_MODE_SUGGESTION)
+                            .executes(c -> setFilterEvent(c, StringArgumentType.getString(c, "eventId"),
+                                    StringArgumentType.getString(c, "mode"), 0)))))
                 .then(Commands.literal("reset")
                     .executes(c -> resetFilterEvents(c, 0))
                     .then(Commands.argument("page", IntegerArgumentType.integer(0))
@@ -631,7 +646,14 @@ public class MTRCommand {
     }
 
     private static int toggleFilterEvent(CommandContext<CommandSourceStack> context, String eventId, int page) {
-        RecordingFilterConfig.toggle(eventId);
+        // Events cycle off → non-empty → all; the replay options just flip.
+        RecordingFilterConfig.cycle(eventId);
+        return openFilterScreen(context, page);
+    }
+
+    private static int setFilterEvent(CommandContext<CommandSourceStack> context, String eventId,
+                                      String modeId, int page) {
+        RecordingFilterConfig.setMode(eventId, RecordMode.byId(modeId, RecordMode.ALL));
         return openFilterScreen(context, page);
     }
 

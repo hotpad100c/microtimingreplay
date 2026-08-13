@@ -1,6 +1,5 @@
 package ml.mypals.microtimingreplay.event;
 
-import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
@@ -32,8 +31,8 @@ public class EntityTickEvent extends Vec3PosEvent {
     }
 
     @Override
-    public boolean saveEvenWithoutAction(MinecraftServer server) {
-        return !server.getGameRules().get(MTRGameRules.SKIP_EMPTY_ENTITY_TICK);
+    public String filterId() {
+        return "entity_tick";
     }
 
     @Override

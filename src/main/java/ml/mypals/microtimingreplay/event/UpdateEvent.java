@@ -1,7 +1,6 @@
 package ml.mypals.microtimingreplay.event;
 
 
-import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -10,10 +9,6 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
-import org.joml.Vector3f;
-
 
 public class UpdateEvent extends MTREvent {
     public static final String TYPE = "update";
@@ -45,8 +40,12 @@ public class UpdateEvent extends MTREvent {
     }
 
     @Override
-    public boolean saveEvenWithoutAction(MinecraftServer server) {
-        return !server.getGameRules().get(MTRGameRules.SKIP_EMPTY_UPDATE);
+    public String filterId() {
+        return switch (updateName == null ? "" : updateName) {
+            case "NeighbourUpdate" -> "neighbor_update";
+            case "ShapeUpdate" -> "shape_update";
+            default -> null;
+        };
     }
 
     @Override

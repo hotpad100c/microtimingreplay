@@ -1,6 +1,5 @@
 package ml.mypals.microtimingreplay.event;
 
-import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -27,8 +26,8 @@ public class BlockEntityTickEvent extends BlockPosEvent {
     }
 
     @Override
-    public boolean saveEvenWithoutAction(MinecraftServer server) {
-        return !server.getGameRules().get(MTRGameRules.SKIP_EMPTY_BLOCK_ENTITY_TICK);
+    public String filterId() {
+        return "block_entity_tick";
     }
 
     @Override

@@ -1,5 +1,6 @@
 package ml.mypals.microtimingreplay.client;
 
+import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.client.screen.FilterScreen;
 import ml.mypals.microtimingreplay.client.screen.TimelineScreen;
 import ml.mypals.microtimingreplay.network.MTRPayloads;
@@ -90,8 +91,8 @@ public class MTRClientNetworking {
         send(new MTRPayloads.SubscribeC2S(""));
     }
 
-    public static void setFilter(String eventId, boolean enabled) {
-        send(new MTRPayloads.SetFilterC2S(eventId, enabled));
+    public static void setFilter(String eventId, RecordMode mode) {
+        send(new MTRPayloads.SetFilterC2S(eventId, mode));
     }
 
     public static void resetFilter() {

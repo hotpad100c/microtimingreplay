@@ -1,7 +1,6 @@
 package ml.mypals.microtimingreplay;
 
 import ml.mypals.microtimingreplay.command.MTRCommand;
-import ml.mypals.microtimingreplay.config.MTRGameRules;
 import ml.mypals.microtimingreplay.event.ItemTransferEvent;
 import ml.mypals.microtimingreplay.event.MTREvents;
 import ml.mypals.microtimingreplay.event.SelectionEventHandler;
@@ -35,7 +34,6 @@ public class MicroTimingReplay implements ModInitializer {
 		ProfileManager.init();
 		WorldBackupManager.init();
 		MTREvents.init();
-		MTRGameRules.init();
 
 		// Payload types must be registered on both sides; this entrypoint runs on both.
 		MTRNetworking.registerTypes();
