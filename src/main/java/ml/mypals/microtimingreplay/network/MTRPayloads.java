@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.network;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -9,6 +10,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Every packet the optional client add-on speaks. The mod stays server-authoritative:
@@ -257,8 +259,15 @@ public class MTRPayloads {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    /** Answer to {@link RequestDetailsC2S}. Large: a deep call stack is not small. */
-    public record DetailsS2C(int step, Component hover, List<String> stackTrace) implements CustomPacketPayload {
+    /**
+     * Answer to {@link RequestDetailsC2S}. Large: a deep call stack is not small.
+     *
+     * @param focus the event's marker block, or empty when the event has no place in the
+     *              world (phases, level ticks). The client keeps its previous focus in that
+     *              case rather than snapping the camera to the origin.
+     */
+    public record DetailsS2C(int step, Component hover, List<String> stackTrace, Optional<BlockPos> focus)
+            implements CustomPacketPayload {
         public static final Type<DetailsS2C> TYPE = MTRPayloads.payloadType("details_s2c");
         public static final StreamCodec<RegistryFriendlyByteBuf, DetailsS2C> CODEC = StreamCodec.of(
                 (buf, payload) -> {
@@ -268,6 +277,8 @@ public class MTRPayloads {
                     for (String line : payload.stackTrace()) {
                         buf.writeUtf(line, 512);
                     }
+                    buf.writeBoolean(payload.focus().isPresent());
+                    payload.focus().ifPresent(buf::writeBlockPos);
                 },
                 buf -> {
                     int step = buf.readVarInt();
@@ -277,7 +288,10 @@ public class MTRPayloads {
                     for (int i = 0; i < count; i++) {
                         lines.add(buf.readUtf(512));
                     }
-                    return new DetailsS2C(step, hover, lines);
+                    Optional<BlockPos> focus = buf.readBoolean()
+                            ? Optional.of(buf.readBlockPos())
+                            : Optional.empty();
+                    return new DetailsS2C(step, hover, lines, focus);
                 });
 
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }

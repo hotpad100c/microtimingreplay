@@ -10,6 +10,7 @@ import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,6 +18,7 @@ import net.minecraft.server.permissions.Permissions;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Server half of the client add-on protocol: payload registration, the receive
@@ -219,9 +221,12 @@ public class MTRNetworking {
         if (!MTRClientTracker.hasClient(player)) return;
 
         Component hover = Component.empty();
+        Optional<BlockPos> focus = Optional.empty();
         for (ReplaySession.ReplayAction action : session.getFlatActionsSnapshot()) {
             if (action.type() != ReplaySession.ActionType.EXIT && action.visibleStepIndex() == step) {
                 hover = action.event().fillHoverText();
+                // Null for events with no place in the world; the client then keeps its old focus.
+                focus = Optional.ofNullable(action.event().getMarkerPos());
                 break;
             }
         }
@@ -229,7 +234,7 @@ public class MTRNetworking {
         // Traces live in a per-session map keyed off the replay context.
         List<String> trace = ReplayContext.call(session.sessionId(), () -> StackTraceManager.get(step));
         ServerPlayNetworking.send(player,
-                new MTRPayloads.DetailsS2C(step, hover, trace == null ? List.of() : trace));
+                new MTRPayloads.DetailsS2C(step, hover, trace == null ? List.of() : trace, focus));
     }
 
     /**

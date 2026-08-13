@@ -1,14 +1,17 @@
 package ml.mypals.microtimingreplay.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.Minecraft;
 import org.jspecify.annotations.NonNull;
 import org.lwjgl.glfw.GLFW;
 import ml.mypals.microtimingreplay.client.ClientReplayState;
 import ml.mypals.microtimingreplay.client.MTRClientConfig;
 import ml.mypals.microtimingreplay.client.MTRClientNetworking;
+import ml.mypals.microtimingreplay.client.camera.ViewportCamera;
 import ml.mypals.microtimingreplay.network.MTRPayloads;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
+import net.minecraft.util.Util;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -18,7 +21,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -50,6 +58,10 @@ public class TimelineScreen extends Screen {
     private static final int JUMP_ZONE = 20;
     private static final int H_SCROLL_STEP = 16;
 
+    private static final double RETARGET_RANGE = 192.0;
+    private static final long DOUBLE_CLICK_MS = 250;
+    private static final double DOUBLE_CLICK_SLOP = 4.0;
+
     private static final int TOOLTIP_TRACE_LINES = 20;
     private static final double SUMMARY_MAX_SHARE = 0.5;
 
@@ -72,9 +84,16 @@ public class TimelineScreen extends Screen {
     private int detailHScroll = 0;
     private int summaryScroll = 0;
 
-    private enum Drag { NONE, TIMELINE_V, TIMELINE_H, DETAIL_V, DETAIL_H, SUMMARY_V }
+    private enum Drag { NONE, TIMELINE_V, TIMELINE_H, DETAIL_V, DETAIL_H, SUMMARY_V, CAMERA_ORBIT, CAMERA_PAN }
 
     private Drag dragging = Drag.NONE;
+
+    private final ViewportCamera camera = new ViewportCamera();
+    private Vec3 lastServerFocus = null;
+
+    private long lastViewportClickMillis = 0;
+    private double lastViewportClickX = 0;
+    private double lastViewportClickY = 0;
 
     private final WidgetTooltipHolder stackTooltip = new WidgetTooltipHolder();
     /** Hit box of the call-stack header, stamped while drawing and read on click. */
@@ -378,8 +397,12 @@ public class TimelineScreen extends Screen {
         detailScroll = 0;
         detailHScroll = 0;
 
-        if (ClientReplayState.details(step) == null) {
+        MTRPayloads.DetailsS2C cached = ClientReplayState.details(step);
+        if (cached == null) {
             MTRClientNetworking.requestDetails(step);
+        } else {
+            // Served from cache, so no packet arrives and nothing else would move the focus.
+            ClientReplayState.noteFocus(cached);
         }
     }
     @Override
@@ -782,6 +805,15 @@ public class TimelineScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
         if (super.mouseClicked(event, doubled)) return true;
 
+        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE && beginCameraDrag(event)) {
+            return true;
+        }
+        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT && isViewportDoubleClick(event)) {
+            if (retargetAt(event.x(), event.y())) {
+                return true;
+            }
+        }
+
         // Scrollbars first: they sit on top of the lists they belong to.
         if (overTimelineVBar(event.x(), event.y())) {
             dragging = Drag.TIMELINE_V;
@@ -916,6 +948,11 @@ public class TimelineScreen extends Screen {
             return true;
         }
 
+        // The middle gap is the camera's.
+        if (overViewport(mouseX, mouseY) && cameraDolly(scrollY)) {
+            return true;
+        }
+
         // Whichever column the pointer is over is the one that scrolls, and control turns
         // the wheel sideways in either of them.
         if (mouseX >= detailX()) {
@@ -1036,6 +1073,14 @@ public class TimelineScreen extends Screen {
             case DETAIL_V -> applyDetailVDrag(event.y());
             case DETAIL_H -> applyDetailHDrag(event.x());
             case SUMMARY_V -> applySummaryVDrag(event.y());
+            case CAMERA_ORBIT -> {
+                camera.orbit(dragX, dragY);
+                applyCamera();
+            }
+            case CAMERA_PAN -> {
+                camera.pan(dragX, dragY, viewportHeight(), fovDegrees());
+                applyCamera();
+            }
             case NONE -> {
                 return super.mouseDragged(event, dragX, dragY);
             }
@@ -1047,8 +1092,107 @@ public class TimelineScreen extends Screen {
     public boolean mouseReleased(MouseButtonEvent event) {
         if (dragging != Drag.NONE) {
             dragging = Drag.NONE;
+
+            GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(),GLFW.GLFW_CURSOR,GLFW.GLFW_CURSOR_NORMAL);
             return true;
         }
         return super.mouseReleased(event);
+    }
+
+
+    private boolean overViewport(double mouseX, double mouseY) {
+        return mouseX >= listRight() && mouseX < detailX()
+                && mouseY >= LIST_TOP - 2 && mouseY < listBottom() + 2;
+    }
+
+    /**
+     * Own double-click detection for the viewport.
+     *
+     * <p>Vanilla's {@code doubled} flag is no use here: {@code MouseHandler} only remembers a
+     * click as the first half of a double if {@code mouseClicked} <em>consumed</em> it, and a
+     * plain left click in the empty middle is consumed by nothing. It also has no position
+     * tolerance — any two clicks within the window count, however far apart — so this checks
+     * distance as well.
+     */
+    private boolean isViewportDoubleClick(MouseButtonEvent event) {
+        if (!overViewport(event.x(), event.y())) return false;
+
+        long now = Util.getMillis();
+        boolean doubled = now - lastViewportClickMillis <= DOUBLE_CLICK_MS
+                && Math.abs(event.x() - lastViewportClickX) <= DOUBLE_CLICK_SLOP
+                && Math.abs(event.y() - lastViewportClickY) <= DOUBLE_CLICK_SLOP;
+
+        // Consume the pair, so a third fast click starts a new one instead of firing again.
+        lastViewportClickMillis = doubled ? 0 : now;
+        lastViewportClickX = event.x();
+        lastViewportClickY = event.y();
+        return doubled;
+    }
+
+    private int viewportHeight() {
+        return Math.max(1, listBottom() + 2 - (LIST_TOP - 2));
+    }
+
+    private double fovDegrees() {
+        return this.minecraft.options.fov().get();
+    }
+    private boolean syncCamera() {
+        LocalPlayer player = this.minecraft.player;
+        Vec3 serverFocus = ClientReplayState.cameraFocus();
+        if (player == null || serverFocus == null) return false;
+
+        Vec3 focus = camera.isPrimed() && serverFocus.equals(lastServerFocus) ? camera.focus() : serverFocus;
+        lastServerFocus = serverFocus;
+        camera.reset(player.getEyePosition(), focus);
+        return true;
+    }
+    private boolean beginCameraDrag(MouseButtonEvent event) {
+        if (!ClientReplayState.cameraFollow() || !overViewport(event.x(), event.y())) return false;
+        if (!syncCamera()) return false;
+        dragging = (event.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0 ? Drag.CAMERA_PAN : Drag.CAMERA_ORBIT;
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(),
+                GLFW.GLFW_CURSOR,GLFW.GLFW_CURSOR_DISABLED);
+        return true;
+    }
+    private boolean cameraDolly(double scrollY) {
+        if (!ClientReplayState.cameraFollow() || !syncCamera()) return false;
+
+        camera.dolly(scrollY);
+        applyCamera();
+        return true;
+    }
+    private boolean retargetAt(double mouseX, double mouseY) {
+        if (!ClientReplayState.cameraFollow() || !overViewport(mouseX, mouseY)) return false;
+
+        LocalPlayer player = this.minecraft.player;
+        if (player == null || this.minecraft.level == null || !syncCamera()) return false;
+
+        Vec3 eye = player.getEyePosition();
+        Vec3 direction = camera.rayThrough(mouseX, mouseY, this.width, this.height, fovDegrees());
+        BlockHitResult hit = this.minecraft.level.clip(new ClipContext(
+                eye, eye.add(direction.scale(RETARGET_RANGE)),
+                ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player));
+        if (hit.getType() != HitResult.Type.BLOCK) return false;
+
+        camera.reset(eye, Vec3.atCenterOf(hit.getBlockPos()));
+        applyCamera();
+        return true;
+    }
+
+
+    /**
+     * Moves the spectating player to where the camera now sits.
+     *
+     * <p>Done client-side rather than through a packet so the view tracks the mouse at frame
+     * rate instead of at round-trip rate. Vanilla's own movement packet carries the result to
+     * the server on the next tick.
+     */
+    private void applyCamera() {
+        LocalPlayer player = this.minecraft.player;
+        if (player == null || !camera.isPrimed()) return;
+
+        Vec3 eye = camera.eyePosition();
+        player.snapTo(eye.x, eye.y - player.getEyeHeight(), eye.z, camera.yaw(), camera.pitch());
+        player.setYHeadRot(camera.yaw());
     }
 }

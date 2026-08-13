@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.client;
 
 import ml.mypals.microtimingreplay.network.MTRPayloads;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,6 +31,8 @@ public class ClientReplayState {
     private static long tick = 0;
     private static long totalTick = 0;
 
+    private static Vec3 cameraFocus = null;
+
     private static final Map<Integer, MTRPayloads.DetailsS2C> DETAILS = new HashMap<>();
     private static List<MTRPayloads.FilterRow> filterRows = List.of();
 
@@ -54,6 +57,7 @@ public class ClientReplayState {
         tick = 0;
         totalTick = 0;
         DETAILS.clear();
+        cameraFocus = null;
         timelineRevision++;
     }
 
@@ -164,11 +168,35 @@ public class ClientReplayState {
 
     public static void onDetails(MTRPayloads.DetailsS2C payload) {
         DETAILS.put(payload.step(), payload);
+        noteFocus(payload);
+    }
+
+    /**
+     * Moves the camera focus onto this step's event.
+     *
+     * <p>Call this for cached details too. {@link #onDetails} only runs when a packet arrives,
+     * and the timeline does not re-request details it already has — so selecting a step you
+     * had visited before would otherwise leave the focus on the previous event, and the next
+     * middle-drag would orbit the old position.
+     *
+     * <p>Phases and level ticks carry no position; keeping the previous focus beats snapping
+     * the camera somewhere arbitrary every time one is selected.
+     */
+    public static void noteFocus(MTRPayloads.DetailsS2C payload) {
+        payload.focus().ifPresent(pos -> cameraFocus = Vec3.atCenterOf(pos));
     }
 
     /** Null until the server answers a {@code RequestDetailsC2S} for this step. */
     public static MTRPayloads.DetailsS2C details(int step) {
         return DETAILS.get(step);
+    }
+
+    /**
+     * Centre of the last positioned event the server told us about, or null before any
+     * arrives. This is what the timeline's viewport camera orbits around.
+     */
+    public static Vec3 cameraFocus() {
+        return cameraFocus;
     }
 
     // ── recording filter ─────────────────────────────────────────────────────

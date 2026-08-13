@@ -83,7 +83,7 @@ public class PistonStructureEvent extends BlockPosEvent {
 
     @Override
     public ChatFormatting getColor() {
-        return resolved ? ChatFormatting.GREEN : ChatFormatting.RED;
+        return resolved ? ChatFormatting.DARK_GREEN : ChatFormatting.DARK_RED;
     }
 
     @Override
