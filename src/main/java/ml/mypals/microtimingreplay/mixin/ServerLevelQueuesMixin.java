@@ -1,5 +1,6 @@
 package ml.mypals.microtimingreplay.mixin;
 
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.AddBlockEventEvent;
@@ -23,6 +24,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -36,6 +38,14 @@ public abstract class ServerLevelQueuesMixin {
 
     @Shadow
     public abstract MinecraftServer getServer();
+
+    /**
+     * The pending block-event queue. Shadowed because {@code blockEvent} silently drops an
+     * entry the set already holds, and that drop is only visible from here.
+     */
+    @Shadow
+    @Final
+    private ObjectLinkedOpenHashSet<BlockEventData> blockEvents;
 
     @Inject(method = "addEntity", at = @At("HEAD"))
     private void mtr$onEntityAddedToWorld(Entity entity, CallbackInfoReturnable<Boolean> cir) {
@@ -199,12 +209,18 @@ public abstract class ServerLevelQueuesMixin {
                 if (activeProfile.outsideArea(pos, dim)) return;
                 long currentTick = this.getServer().getTickCount() - MTRState.getRecordStartTick();
                 int blockStateId = Block.getId(block.defaultBlockState());
-                
+
+                // blockEvents is a Set of a record keyed on all four values, so an identical
+                // entry already in the queue makes this call a no-op. Unlike scheduled ticks,
+                // which collide on position and type alone, a different b0/b1 here is a
+                // genuinely new event and does get queued.
+                boolean shouldFail = this.blockEvents.contains(new BlockEventData(pos, block, b0, b1));
+
                 AddBlockEventEvent event = new AddBlockEventEvent(
                     currentTick,
                     pos.getX(), pos.getY(), pos.getZ(),
                     blockStateId, b0, b1,
-                    dim
+                    dim, shouldFail
                 );
                 MTRState.recordStep(event);
             }

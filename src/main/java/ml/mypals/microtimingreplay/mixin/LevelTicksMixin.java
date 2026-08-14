@@ -5,6 +5,7 @@ import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.AddScheduleTickEvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
@@ -12,15 +13,19 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.ticks.LevelTicks;
 import net.minecraft.world.ticks.ScheduledTick;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LevelTicks.class)
-public class LevelTicksMixin {
+public abstract class LevelTicksMixin<T> {
+
+    @Shadow
+    public abstract boolean hasScheduledTick(BlockPos pos, T block);
 
     @Inject(method = "schedule", at = @At("HEAD"))
-    private void mtr$onSchedule(ScheduledTick<?> tick, CallbackInfo ci) {
+    private void mtr$onSchedule(ScheduledTick<T> tick, CallbackInfo ci) {
         if (MTRState.getCurrentState() == MTRState.State.RECORDING && MicroTimingReplay.server != null) {
             if (!RecordingFilterConfig.isEnabled("add_schedule_tick")) return;
             String dimension = "";
@@ -29,6 +34,7 @@ public class LevelTicksMixin {
                     dimension = level.dimension().identifier().toString();
                     break;
                 }
+
             }
             if (dimension.isEmpty()) return;
 
@@ -45,7 +51,9 @@ public class LevelTicksMixin {
             } else {
                 typeId = tick.type().toString();
             }
-            MTRState.recordStep(new AddScheduleTickEvent(trigger, tick.pos().getX(), tick.pos().getY(), tick.pos().getZ(), typeId, tick.triggerTick(), tick.priority().getValue(), tick.subTickOrder(), dimension));
+            MTRState.recordStep(new AddScheduleTickEvent(trigger, tick.pos().getX(), tick.pos().getY(), tick.pos().getZ(),
+                    typeId, tick.triggerTick(), tick.priority().getValue(),
+                    tick.subTickOrder(), dimension, this.hasScheduledTick(tick.pos(), tick.type())));
         }
     }
 }

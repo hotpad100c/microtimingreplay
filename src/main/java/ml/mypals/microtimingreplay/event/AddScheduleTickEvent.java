@@ -11,7 +11,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.Blocks;
 import org.joml.Vector3f;
 
 public class AddScheduleTickEvent extends BlockPosEvent {
@@ -20,24 +19,29 @@ public class AddScheduleTickEvent extends BlockPosEvent {
     private final String typeId;
     private final long triggerTick;
     private final int priority;
-    private final  long subTickOrder;
+    private final long subTickOrder;
+    private final boolean shouldFail;
 
-    public AddScheduleTickEvent(long tick, int x, int y, int z, String typeId, long triggerTick, int priority, long subTickOrder, String dimension) {
+    public AddScheduleTickEvent(long tick, int x, int y, int z, String typeId,
+                                long triggerTick, int priority,
+                                long subTickOrder, String dimension, boolean shouldFail) {
         super(tick, TYPE, new BlockPos(x, y, z), dimension);
         this.typeId = typeId;
         this.triggerTick = triggerTick;
         this.priority = priority;
         this.subTickOrder = subTickOrder;
+        this.shouldFail = shouldFail;
     }
 
     public String getTypeId() { return typeId; }
     public long getTriggerTick() { return triggerTick; }
     public int getPriority() { return priority; }
     public long getSubTickOrder() { return subTickOrder; }
+    public boolean shouldFail() { return shouldFail; }
 
     @Override
     public ChatFormatting getColor() {
-        return ChatFormatting.YELLOW;
+        return shouldFail ? ChatFormatting.GRAY : ChatFormatting.YELLOW;
     }
 
     @Override
@@ -54,14 +58,13 @@ public class AddScheduleTickEvent extends BlockPosEvent {
         long delay = triggerTick - getTick();
 
         MutableComponent text = MTRComponent.translatable("mtr.tooltip.schedule_tick_title", "Scheduled Tile Tick @ [%d, %d, %d]", getX(), getY(), getZ())
-                .append(Component.literal("\n")).withStyle(ChatFormatting.YELLOW);
+                .append(Component.literal("\n")).withStyle( shouldFail ? ChatFormatting.DARK_RED : ChatFormatting.YELLOW);
 
         if (getDimension() != null && !getDimension().isEmpty()) {
             text.append(MTRComponent.translatable("mtr.tooltip.dimension", "Dimension: %s", getDimension()).withStyle(ChatFormatting.GOLD))
                 .append(Component.literal("\n"));
         }
-
-        return text
+        text
                 .append(MTRComponent.translatable("mtr.tooltip.target", "Target: %s", typeId != null ? typeId : "unknown").withStyle(ChatFormatting.AQUA))
                 .append(Component.literal("\n"))
                 .append(MTRComponent.translatable("mtr.tooltip.trigger_tick", "Trigger Tick: %d (Delay: %dgt)", triggerTick, delay).withStyle(ChatFormatting.WHITE))
@@ -69,6 +72,8 @@ public class AddScheduleTickEvent extends BlockPosEvent {
                 .append(MTRComponent.translatable("mtr.tooltip.priority", "Priority: %s (%d)", prioName, priority).withStyle(ChatFormatting.GOLD))
                 .append(Component.literal("\n"))
                 .append(MTRComponent.translatable("mtr.tooltip.subtick_order", "SubTick Order: %d", subTickOrder).withStyle(ChatFormatting.DARK_GRAY));
+
+        return shouldFail ? text.append(Component.literal(" \n ✖").withStyle(ChatFormatting.RED)) : text;
     }
 
     @Override
@@ -78,6 +83,7 @@ public class AddScheduleTickEvent extends BlockPosEvent {
         tag.putLong("triggerTick", triggerTick);
         tag.putInt("priority", priority);
         tag.putLong("subTickOrder", subTickOrder);
+        tag.putBoolean("shouldFail", shouldFail);
         return tag;
     }
 
@@ -91,7 +97,8 @@ public class AddScheduleTickEvent extends BlockPosEvent {
                 tag.getLong("triggerTick").orElse(0L),
                 tag.getInt("priority").orElse(0),
                 tag.getLong("subTickOrder").orElse(0L),
-                tag.getString("dimension").orElse("")
+                tag.getString("dimension").orElse(""),
+                tag.getBoolean("shouldFail").orElse(false)
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

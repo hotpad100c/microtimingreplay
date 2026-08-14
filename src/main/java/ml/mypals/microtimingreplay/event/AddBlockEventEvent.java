@@ -26,21 +26,25 @@ public class AddBlockEventEvent extends BlockPosEvent {
 
     private final int blockStateId;
     private final int b0, b1;
+    private final boolean shouldFail;
 
-    public AddBlockEventEvent(long tick, int x, int y, int z, int blockStateId, int b0, int b1, String dimension) {
+    public AddBlockEventEvent(long tick, int x, int y, int z, int blockStateId, int b0, int b1,
+                              String dimension, boolean shouldFail) {
         super(tick, TYPE, new BlockPos(x, y, z), dimension);
         this.blockStateId = blockStateId;
         this.b0 = b0;
         this.b1 = b1;
+        this.shouldFail = shouldFail;
     }
 
     public int getBlockStateId() { return blockStateId; }
     public int getB0() { return b0; }
     public int getB1() { return b1; }
+   public boolean shouldFail() { return shouldFail; }
 
     @Override
     public ChatFormatting getColor() {
-        return ChatFormatting.YELLOW;
+        return shouldFail ? ChatFormatting.GRAY : ChatFormatting.YELLOW;
     }
 
     @Override
@@ -81,7 +85,7 @@ public class AddBlockEventEvent extends BlockPosEvent {
                 .append(MTRComponent.translatable("mtr.tooltip.event_param", "Event Param (b1): %d", b1).withStyle(ChatFormatting.WHITE));
         }
 
-        return text;
+        return shouldFail ? text.append(Component.literal(" \n ✖").withStyle(ChatFormatting.RED)) : text;
     }
 
     public static AddBlockEventEvent readNBT(CompoundTag tag) {
@@ -98,7 +102,8 @@ public class AddBlockEventEvent extends BlockPosEvent {
             tag.getInt("x").orElse(0), tag.getInt("y").orElse(0), tag.getInt("z").orElse(0),
             stateId,
             tag.getInt("b0").orElse(0), tag.getInt("b1").orElse(0),
-            tag.getString("dimension").orElse("")
+            tag.getString("dimension").orElse(""),
+            tag.getBoolean("shouldFail").orElse(false)
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;
@@ -110,6 +115,7 @@ public class AddBlockEventEvent extends BlockPosEvent {
         tag.putInt("blockStateId", blockStateId);
         tag.putInt("b0", b0);
         tag.putInt("b1", b1);
+        tag.putBoolean("shouldFail", shouldFail);
         return tag;
     }
 
