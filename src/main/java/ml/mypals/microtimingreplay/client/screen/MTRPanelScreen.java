@@ -89,7 +89,7 @@ public class MTRPanelScreen extends Screen {
             cards.add(new Card(MTRComponent.translatable("mtr.panel.timeline", "Timeline"), 0, 0, 62, false,
                     () -> this.minecraft.setScreen(new TimelineScreen()), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.filter", "Filter"), 0, 0, 56, false,
-                    () -> this.minecraft.setScreen(new FilterScreen()), null));
+                    () -> this.minecraft.setScreen(new FilterScreen(null)), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.settings", "Settings"), 0, 0, 56, false,
                     () -> this.minecraft.setScreen(new ClientConfigScreen()), null));
             cards.add(new Card(
@@ -108,7 +108,7 @@ public class MTRPanelScreen extends Screen {
                         () -> MTRClientNetworking.subscribe(profile), null));
             }
             cards.add(new Card(MTRComponent.translatable("mtr.panel.filter", "Filter"), 0, 0, 56, false,
-                    () -> this.minecraft.setScreen(new FilterScreen()), null));
+                    () -> this.minecraft.setScreen(new FilterScreen(null)), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.settings", "Settings"), 0, 0, 56, false,
                     () -> this.minecraft.setScreen(new ClientConfigScreen()), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.help", "Guide"), 0, 0, 56, false,

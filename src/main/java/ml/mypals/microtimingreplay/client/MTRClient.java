@@ -29,9 +29,13 @@ public class MTRClient implements ClientModInitializer {
             // how the client learns whether to offer the panel at all.
             MTRClientNetworking.sendHello();
         });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientReplayState.reset());
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            ClientReplayState.reset();
+            TimelineAutoHide.forget();
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(MTRClient::openPanelWhenHeld);
+        ClientTickEvents.END_CLIENT_TICK.register(TimelineAutoHide::tick);
     }
 
     /** When the bound key went down, or 0 while it is up. */

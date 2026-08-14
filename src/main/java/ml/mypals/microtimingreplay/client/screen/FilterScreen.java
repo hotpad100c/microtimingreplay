@@ -34,8 +34,20 @@ public class FilterScreen extends Screen {
     private String activeCategory = "";
     private int scroll = 0;
 
+     private final Screen parent;
+
     public FilterScreen() {
+        this(null);
+    }
+
+    public FilterScreen(Screen parent) {
         super(MTRComponent.translatable("mtr.filter.title", "Event Recording Filter"));
+        this.parent = parent;
+    }
+
+    @Override
+    public void onClose() {
+        this.minecraft.setScreen(parent);
     }
 
     @Override

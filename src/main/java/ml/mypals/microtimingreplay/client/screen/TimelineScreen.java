@@ -7,6 +7,7 @@ import org.lwjgl.glfw.GLFW;
 import ml.mypals.microtimingreplay.client.ClientReplayState;
 import ml.mypals.microtimingreplay.client.MTRClientConfig;
 import ml.mypals.microtimingreplay.client.MTRClientNetworking;
+import ml.mypals.microtimingreplay.client.TimelineAutoHide;
 import ml.mypals.microtimingreplay.client.camera.ViewportCamera;
 import ml.mypals.microtimingreplay.network.MTRPayloads;
 import ml.mypals.microtimingreplay.util.MTRComponent;
@@ -200,7 +201,7 @@ public class TimelineScreen extends Screen {
         addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.timeline.forward", "Forward ▶"),
                 b -> MTRClientNetworking.step(true)).bounds(82, bottom, 70, 18).build());
         addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.timeline.filter", "Filter"),
-                b -> this.minecraft.setScreen(new FilterScreen())).bounds(this.width - 154, bottom, 70, 18).build());
+                b -> this.minecraft.setScreen(new FilterScreen(this))).bounds(this.width - 154, bottom, 70, 18).build());
         addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.timeline.close", "Close"),
                 b -> onClose()).bounds(this.width - 80, bottom, 70, 18).build());
 
@@ -890,6 +891,13 @@ public class TimelineScreen extends Screen {
             return true;
         }
 
+        if (ClientReplayState.cameraFollow() && !searching() && matchesHideGui(event)) {
+            this.minecraft.options.hideGui = true;
+            TimelineAutoHide.markHidden();
+            this.minecraft.setScreen(null);
+            return true;
+        }
+
         if (control && event.key() == GLFW.GLFW_KEY_F) {
             openSearch();
             return true;
@@ -1218,6 +1226,10 @@ public class TimelineScreen extends Screen {
         return super.mouseReleased(event);
     }
 
+
+    private boolean matchesHideGui(KeyEvent event) {
+        return this.minecraft.options.keyToggleGui.matches(event);
+    }
 
     // Manual---
 
