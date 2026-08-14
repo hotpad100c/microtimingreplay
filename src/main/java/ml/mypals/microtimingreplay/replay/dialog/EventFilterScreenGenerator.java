@@ -142,6 +142,7 @@ public class EventFilterScreenGenerator {
         }
         return switch (mode) {
             case OFF -> MTRComponent.translatable("mtr.filter.mode.off", "DontRecord");
+            case NO_DISPLAY -> MTRComponent.translatable("mtr.filter.mode.no_display", "Hidden");
             case NON_EMPTY -> MTRComponent.translatable("mtr.filter.mode.non_empty", "NotEmpty");
             case ALL -> MTRComponent.translatable("mtr.filter.mode.all", "Everything");
         };
@@ -150,6 +151,7 @@ public class EventFilterScreenGenerator {
     private static ChatFormatting modeColor(RecordMode mode) {
         return switch (mode) {
             case OFF -> ChatFormatting.RED;
+            case NO_DISPLAY -> ChatFormatting.DARK_GRAY;
             case NON_EMPTY -> ChatFormatting.YELLOW;
             case ALL -> ChatFormatting.GREEN;
         };

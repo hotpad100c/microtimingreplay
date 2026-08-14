@@ -39,6 +39,12 @@ public class AddScheduleTickEvent extends BlockPosEvent {
     public long getSubTickOrder() { return subTickOrder; }
     public boolean shouldFail() { return shouldFail; }
 
+
+    @Override
+    public String filterId() {
+        return "add_schedule_tick";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return shouldFail ? ChatFormatting.GRAY : ChatFormatting.YELLOW;

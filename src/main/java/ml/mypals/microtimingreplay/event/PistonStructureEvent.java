@@ -81,6 +81,12 @@ public class PistonStructureEvent extends BlockPosEvent {
         return blockingPos;
     }
 
+
+    @Override
+    public String filterId() {
+        return "piston_structure";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return resolved ? ChatFormatting.DARK_GREEN : ChatFormatting.DARK_RED;

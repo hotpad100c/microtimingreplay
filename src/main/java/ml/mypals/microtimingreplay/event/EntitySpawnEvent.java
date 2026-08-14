@@ -48,6 +48,12 @@ public class EntitySpawnEvent extends Vec3PosEvent {
     public float getPitch() { return pitch; }
     public boolean isDespawn() { return despawn; }
 
+
+    @Override
+    public String filterId() {
+        return isDespawn() ? "entity_despawn" : "entity_spawn";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return despawn ? ChatFormatting.DARK_RED : ChatFormatting.GREEN;

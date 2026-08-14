@@ -62,6 +62,12 @@ public class ItemTransferEvent extends BlockPosEvent {
         return new ItemStack(item, count);
     }
 
+
+    @Override
+    public String filterId() {
+        return "item_transfer";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return ChatFormatting.GOLD;

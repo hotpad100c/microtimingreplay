@@ -32,6 +32,12 @@ public class PostGameEventEvent extends Vec3PosEvent {
     public String getEntityUUid() { return entityUUID.isEmpty() ? null: entityUUID; }
 
 
+
+    @Override
+    public String filterId() {
+        return "post_game_event";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return ChatFormatting.DARK_AQUA;

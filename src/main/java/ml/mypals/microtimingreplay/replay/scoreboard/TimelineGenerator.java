@@ -90,10 +90,16 @@ public class TimelineGenerator {
             };
         }
 
-        int stepIndex = stepMap.getOrDefault(event, -1);
-        out.add(new Node(event, prefix + (isLast ? "└" : "├"), isCurrent, highlight, stepIndex));
+        // Hidden by NO_DISPLAY: emit no line and do not indent, so the children read as
+        // belonging to this node's parent rather than to a gap.
+        boolean shown = event.isDisplayed();
+        String childPrefix = prefix;
+        if (shown) {
+            int stepIndex = stepMap.getOrDefault(event, -1);
+            out.add(new Node(event, prefix + (isLast ? "└" : "├"), isCurrent, highlight, stepIndex));
+            childPrefix = prefix + (isLast ? "  " : "│");
+        }
 
-        String childPrefix = prefix + (isLast ? "  " : "│");
         List<MTREvent> children = event.getChildren();
         for (int i = 0; i < children.size(); i++) {
             traverse(children.get(i), childPrefix, i == children.size() - 1, out, currentAction, stepMap);

@@ -42,6 +42,12 @@ public class EntitySetHealthEvent extends Vec3PosEvent {
     public float getNewHealth() { return newHealth; }
     public float getMaxHealth() { return maxHealth; }
 
+
+    @Override
+    public String filterId() {
+        return "entity_set_health";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return newHealth < oldHealth ? ChatFormatting.RED : ChatFormatting.GREEN;

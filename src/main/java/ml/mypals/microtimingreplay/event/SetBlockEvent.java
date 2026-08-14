@@ -39,6 +39,12 @@ public class SetBlockEvent extends BlockPosEvent {
     public int getOldStateId() { return oldStateId; }
     public int getNewStateId() { return newStateId; }
     public int getBitFlag(){return bitFlag;}
+
+    @Override
+    public String filterId() {
+        return "set_block";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return succeed ? ChatFormatting.GREEN : ChatFormatting.RED;

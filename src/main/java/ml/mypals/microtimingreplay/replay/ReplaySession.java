@@ -224,7 +224,10 @@ public class ReplaySession {
         int total = 0;
 
         for (int i = 0; i < flatActions.size(); i++) {
-            if (flatActions.get(i).type() == ActionType.EXIT) continue;
+            ReplayAction action = flatActions.get(i);
+            // EXITs are bookkeeping, and a NO_DISPLAY event produces no row, so neither may be counted.
+            if (action.type() == ActionType.EXIT) continue;
+            if (!action.event().isDisplayed()) continue;
             total++;
             if (i < bounded) beforeCursor++;
         }
@@ -454,6 +457,7 @@ public class ReplaySession {
         for (int i = 0; i < maxLen; i++) {
             ReplayAction a = flatActions.get(i);
             if (a.type != ActionType.LEAF) continue;
+            if (!a.event.isDisplayed()) continue;
             if (a.event instanceof MovingPistonEvent mpe) {
                 mpe.display(resolveLevel(level, mpe));
             } else if (a.event instanceof MovingPistonTickEvent mpte) {
@@ -484,20 +488,25 @@ public class ReplaySession {
                 if (currentAction.type == ActionType.LEAF) {
                     MTREvent evt = currentAction.event;
                     BlockPos posKey = evt.getMarkerPos();
-                    if (posKey != null && innerOccupied.add(posKey) && i != actionCursor - 1) {
+                    if (posKey != null && evt.isDisplayed() && innerOccupied.add(posKey)
+                            && i != actionCursor - 1) {
                         evt.display(resolveLevel(level, evt));
                     }
                 }
             }
             if (actionCursor > 0 && actionCursor <= flatActions.size()) {
                 ReplayAction currentAction = flatActions.get(actionCursor - 1);
-                if (currentAction.type == ActionType.LEAF) leafEvent = currentAction.event;
-                else if (currentAction.type == ActionType.EXIT) exitEvent = currentAction.event;
+                if (currentAction.event.isDisplayed()) {
+                    if (currentAction.type == ActionType.LEAF) leafEvent = currentAction.event;
+                    else if (currentAction.type == ActionType.EXIT) exitEvent = currentAction.event;
+                }
             }
         } else {
             if (actionCursor > 0 && actionCursor <= flatActions.size()) {
                 ReplayAction currentAction = flatActions.get(actionCursor - 1);
-                if (currentAction.type == ActionType.LEAF) {
+                if (!currentAction.event.isDisplayed()) {
+                    // hidden: nothing to draw for the cursor
+                } else if (currentAction.type == ActionType.LEAF) {
                     leafEvent = currentAction.event;
                     BlockPos p = leafEvent.getMarkerPos();
                     if (p != null) innerOccupied.add(p);
@@ -511,6 +520,7 @@ public class ReplaySession {
 
         for (int i = activeStack.size() - 1; i >= 0; i--) {
             MTREvent parent = activeStack.get(i);
+            if (!parent.isDisplayed()) continue;
             BlockPos pos = parent.getMarkerPos();
 
             boolean isPillar = false;
@@ -648,6 +658,9 @@ public class ReplaySession {
     }
 
     private static boolean isValidStep(ServerLevel level, ReplayAction action) {
+        // NO_DISPLAY events are stepped straight past. The action itself already ran a few
+        // lines earlier in the advance loop, so the world ends up in the same state either way.
+        if (!action.event.isDisplayed()) return false;
         if (RecordingFilterConfig.optionEnabled("step_ignore_updates")) {
             if (action.event instanceof UpdateEvent)
                 return false;

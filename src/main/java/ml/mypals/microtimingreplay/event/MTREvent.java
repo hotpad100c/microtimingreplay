@@ -109,7 +109,21 @@ public abstract class MTREvent {
      */
     public boolean saveEvenWithoutAction(MinecraftServer server) {
         String id = filterId();
-        return id == null || RecordingFilterConfig.mode(id) == RecordMode.ALL;
+        if (id == null) return true;
+        RecordMode mode = RecordingFilterConfig.mode(id);
+        // NO_DISPLAY keeps everything, empties included: the point is that switching the
+        // filter back later reveals the full picture from the same recording.
+        return mode == RecordMode.ALL || mode == RecordMode.NO_DISPLAY;
+    }
+
+    /**
+     * Whether this event should be shown at all — timeline row, marker, and as a place a step
+     * can land. Evaluated live against the filter, never stored, so the same recording follows
+     * whatever the filter says today.
+     */
+    public boolean isDisplayed() {
+        String id = filterId();
+        return id == null || RecordingFilterConfig.mode(id).displays();
     }
 
     public static final float MARKER_SCALE = 1.005f;

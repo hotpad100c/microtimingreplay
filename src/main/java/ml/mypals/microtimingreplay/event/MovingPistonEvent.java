@@ -49,6 +49,12 @@ public class MovingPistonEvent extends BlockPosEvent {
     public boolean isSourcePiston() { return isSourcePiston; }
     public boolean isDespawn() { return despawn; }
 
+
+    @Override
+    public String filterId() {
+        return isDespawn() ? "moving_piston_despawn" : "moving_piston_start";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return ChatFormatting.LIGHT_PURPLE;

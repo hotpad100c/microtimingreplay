@@ -3,7 +3,9 @@ package ml.mypals.microtimingreplay.network;
 import ml.mypals.microtimingreplay.replay.ReplaySession;
 import net.minecraft.ChatFormatting;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 
 /**
@@ -26,15 +28,34 @@ public class TimelineSnapshot {
         List<MTRPayloads.TimelineRow> rows = new ArrayList<>(flat.size());
         int depth = 0;
         int cursorRow = -1;
+        // One entry per open scope: did we indent for it? A scope hidden by NO_DISPLAY
+        // has no row, no indent. So its children sit at the parent's level and the
+        // matching EXIT must not un-indent something that never happened.
+        Deque<Boolean> indented = new ArrayDeque<>();
 
         for (int i = 0; i < flat.size(); i++) {
             ReplaySession.ReplayAction action = flat.get(i);
             boolean isCursor = i == cursor - 1;
 
             if (action.type() == ReplaySession.ActionType.EXIT) {
-                depth = Math.max(0, depth - 1);
+                if (Boolean.TRUE.equals(indented.pollLast())) {
+                    depth = Math.max(0, depth - 1);
+                }
                 // Sitting on a scope's EXIT reads as "still inside that scope" to a user,
                 // so point at the last row we emitted rather than nothing.
+                if (isCursor) cursorRow = rows.size() - 1;
+                continue;
+            }
+
+            boolean shown = action.event().isDisplayed();
+
+            if (action.type() == ReplaySession.ActionType.ENTER) {
+                indented.addLast(shown);
+            }
+
+            if (!shown) {
+                // The cursor can legitimately sit on a hidden event; point at whatever row
+                // precedes it so the highlight lands somewhere sensible.
                 if (isCursor) cursorRow = rows.size() - 1;
                 continue;
             }

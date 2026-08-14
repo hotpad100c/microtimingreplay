@@ -45,6 +45,12 @@ public class NetworkPacketEvent extends Vec3PosEvent {
         return packetDetail;
     }
 
+
+    @Override
+    public String filterId() {
+        return "network_packet";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return "SEND".equalsIgnoreCase(direction) ? ChatFormatting.DARK_RED : ChatFormatting.DARK_AQUA;

@@ -34,6 +34,12 @@ public class ReceivedGameEventEvent extends Vec3PosEvent {
     public String getSourceUUID() { return sourceUUID.isEmpty() ? null : sourceUUID; }
     public String getProjectileOwnerUUID() { return projectileOwnerUUID.isEmpty() ? null : projectileOwnerUUID; }
 
+
+    @Override
+    public String filterId() {
+        return "received_game_event";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return ChatFormatting.DARK_AQUA;

@@ -58,6 +58,12 @@ public class MovingPistonTickEvent extends BlockPosEvent {
         return isSourcePiston;
     }
 
+
+    @Override
+    public String filterId() {
+        return "moving_piston_tick";
+    }
+
     @Override
     public MutableComponent fillHoverText() {
         BlockState movedState = Block.stateById(movedBlockStateId);

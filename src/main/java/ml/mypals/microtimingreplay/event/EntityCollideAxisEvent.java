@@ -61,6 +61,12 @@ public class EntityCollideAxisEvent extends Vec3PosEvent {
     public double getAttemptedDistance() { return attemptedDistance; }
     public double getCollisionDistance() { return collisionDistance; }
 
+
+    @Override
+    public String filterId() {
+        return "entity_collide_axis";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return switch (axis.toUpperCase()) {

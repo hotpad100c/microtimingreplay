@@ -199,6 +199,7 @@ public class FilterScreen extends Screen {
         }
         return switch (mode) {
             case OFF -> MTRComponent.translatable("mtr.filter.mode.off", "DontRecord");
+            case NO_DISPLAY -> MTRComponent.translatable("mtr.filter.mode.no_display", "Hidden");
             case NON_EMPTY -> MTRComponent.translatable("mtr.filter.mode.non_empty", "NotEmpty");
             case ALL -> MTRComponent.translatable("mtr.filter.mode.all", "Everything");
         };
@@ -207,6 +208,7 @@ public class FilterScreen extends Screen {
     private static int modeColor(RecordMode mode) {
         return switch (mode) {
             case OFF -> MTRWidgets.TEXT_OFF;
+            case NO_DISPLAY -> MTRWidgets.TEXT_DIM;
             case NON_EMPTY -> MTRWidgets.TEXT_ACCENT;
             case ALL -> MTRWidgets.TEXT_ON;
         };

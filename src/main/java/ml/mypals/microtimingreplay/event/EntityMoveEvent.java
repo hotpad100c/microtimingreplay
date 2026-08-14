@@ -58,6 +58,12 @@ public class EntityMoveEvent extends Vec3PosEvent {
     public float getPitch() { return pitch; }
     public Vec3 getVelocity() { return new Vec3(dx, dy, dz); }
 
+
+    @Override
+    public String filterId() {
+        return "entity_move";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return ChatFormatting.GOLD;

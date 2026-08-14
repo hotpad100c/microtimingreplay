@@ -27,6 +27,12 @@ public class BlockEntityCreationEvent extends BlockPosEvent {
         return blockEntityType;
     }
 
+
+    @Override
+    public String filterId() {
+        return "block_entity_creation";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return ChatFormatting.AQUA;

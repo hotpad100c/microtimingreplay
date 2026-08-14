@@ -42,6 +42,12 @@ public class AddBlockEventEvent extends BlockPosEvent {
     public int getB1() { return b1; }
    public boolean shouldFail() { return shouldFail; }
 
+
+    @Override
+    public String filterId() {
+        return "add_block_event";
+    }
+
     @Override
     public ChatFormatting getColor() {
         return shouldFail ? ChatFormatting.GRAY : ChatFormatting.YELLOW;

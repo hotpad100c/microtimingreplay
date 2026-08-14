@@ -70,8 +70,9 @@ public final class MTRHelpText {
 
             Recording filter
               /mtr filter screen [page]
-              /mtr filter toggle <event> - cycle DontRecord / NotEmpty / Everything
-              /mtr filter set <event> <mode> - mode: off, non_empty, all
+              /mtr filter toggle <event> - cycle DontRecord / Hidden / NotEmpty / Everything
+              /mtr filter set <event> <mode> - mode: off, no_display, non_empty, all
+              Hidden records the event but shows nothing and steps past it
               /mtr filter reset
 
             Other
