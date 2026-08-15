@@ -1,4 +1,4 @@
-# MicroTimingReplay (MTIR)
+# MicroTimingReplay (MTIR) (Patrly Outdated)
 
 A Fabric mod for **recording** micro-timing events on the server over a period of time (block updates, shape updates, scheduled ticks, block events, piston movements, entity movement/spawning, etc.) and later **step-by-step replaying** them — you can go forward, backward, jump to any step, and inspect the Java call stack at the moment each event was produced.
 
