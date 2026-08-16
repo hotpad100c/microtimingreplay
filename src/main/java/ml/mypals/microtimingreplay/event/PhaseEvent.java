@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
@@ -77,7 +79,7 @@ public class PhaseEvent extends MTREvent {
     }
 
     public static PhaseEvent readNBT(CompoundTag tag) {
-        PhaseEvent event = new PhaseEvent(tag.getLong("tick").orElse(0L), tag.getString("phaseName").orElse("unknown"));
+        PhaseEvent event = new PhaseEvent(tag.getLong("tick"), MTRNbt.getString(tag, "phaseName", "unknown"));
         MTREvent.readChildrenNBT(event, tag);
         return event;
     }

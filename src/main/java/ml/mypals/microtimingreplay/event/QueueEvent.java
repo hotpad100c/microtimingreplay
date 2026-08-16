@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
@@ -75,7 +77,7 @@ public class QueueEvent extends BlockPosEvent {
     }
 
     public static QueueEvent readNBT(CompoundTag tag) {
-        QueueEvent event = new QueueEvent(tag.getLong("tick").orElse(0L), tag.getString("queueName").orElse("unknown"), new BlockPos(tag.getInt("x").orElse(0), tag.getInt("y").orElse(0), tag.getInt("z").orElse(0)), tag.getString("dimension").orElse(""));
+        QueueEvent event = new QueueEvent(tag.getLong("tick"), MTRNbt.getString(tag, "queueName", "unknown"), new BlockPos(tag.getInt("x"), tag.getInt("y"), tag.getInt("z")), tag.getString("dimension"));
         MTREvent.readChildrenNBT(event, tag);
         return event;
     }

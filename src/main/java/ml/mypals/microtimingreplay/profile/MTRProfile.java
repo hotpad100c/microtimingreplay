@@ -1,8 +1,11 @@
 package ml.mypals.microtimingreplay.profile;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 import ml.mypals.microtimingreplay.event.MTREvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.world.phys.Vec3;
 
@@ -58,10 +61,10 @@ public class MTRProfile {
 
         public static Area readNBT(CompoundTag tag) {
             return new Area(
-                tag.getString("name").orElse(""),
-                tag.getInt("x1").orElse(0), tag.getInt("y1").orElse(0), tag.getInt("z1").orElse(0),
-                tag.getInt("x2").orElse(0), tag.getInt("y2").orElse(0), tag.getInt("z2").orElse(0),
-                tag.getString("dimension").orElse("minecraft:overworld")
+                tag.getString("name"),
+                tag.getInt("x1"), tag.getInt("y1"), tag.getInt("z1"),
+                tag.getInt("x2"), tag.getInt("y2"), tag.getInt("z2"),
+                MTRNbt.getString(tag, "dimension", "minecraft:overworld")
             );
         }
     }
@@ -233,18 +236,18 @@ public class MTRProfile {
     }
 
     public static MTRProfile readNBT(CompoundTag tag) {
-        MTRProfile profile = new MTRProfile(tag.getString("name").orElse("unknown"));
-        profile.createdAt = tag.getLong("createdAt").orElse(0L);
-        profile.ticksRecorded = tag.getInt("ticksRecorded").orElse(0);
+        MTRProfile profile = new MTRProfile(MTRNbt.getString(tag, "name", "unknown"));
+        profile.createdAt = tag.getLong("createdAt");
+        profile.ticksRecorded = tag.getInt("ticksRecorded");
         
-        ListTag framesList = tag.getList("frames").orElse(new ListTag());
+        ListTag framesList = tag.getList("frames", Tag.TAG_COMPOUND);
         for (int i = 0; i < framesList.size(); i++) {
-            profile.frames.add(TickFrame.readNBT(framesList.getCompound(i).orElse(new CompoundTag())));
+            profile.frames.add(TickFrame.readNBT(framesList.getCompound(i)));
         }
         
-        ListTag areasList = tag.getList("areas").orElse(new ListTag());
+        ListTag areasList = tag.getList("areas", Tag.TAG_COMPOUND);
         for (int i = 0; i < areasList.size(); i++) {
-            profile.areas.add(Area.readNBT(areasList.getCompound(i).orElse(new CompoundTag())));
+            profile.areas.add(Area.readNBT(areasList.getCompound(i)));
         }
         
         return profile;

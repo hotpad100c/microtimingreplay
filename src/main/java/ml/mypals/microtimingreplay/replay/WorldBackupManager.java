@@ -1,8 +1,6 @@
 package ml.mypals.microtimingreplay.replay;
 
 
-import net.minecraft.world.level.storage.ValueInput;
-
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.util.MTRBlockFlags;
@@ -10,19 +8,17 @@ import ml.mypals.microtimingreplay.util.PlayerProxy;
 import ml.mypals.microtimingreplay.profile.WorldScopedStorage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.storage.TagValueInput;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +40,7 @@ public class WorldBackupManager {
         for (MTRProfile.Area area : profile.getAreas()) {
             ServerLevel level = null;
             for (ServerLevel sl : MicroTimingReplay.server.getAllLevels()) {
-                if (sl.dimension().identifier().toString().equals(area.dimension)) {
+                if (sl.dimension().location().toString().equals(area.dimension)) {
                     level = sl;
                     break;
                 }
@@ -92,7 +88,7 @@ public class WorldBackupManager {
             ListTag entitiesTag = new ListTag();
             for (Entity entity : level.getAllEntities()) {
                 if (entity instanceof Player && !includePlayerStandIns) continue;
-                if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
+                if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
 
                 double ex = entity.getX();
                 double ey = entity.getY();
@@ -127,31 +123,31 @@ public class WorldBackupManager {
         
         try {
             CompoundTag rootTag = NbtIo.readCompressed(path, NbtAccounter.unlimitedHeap());
-            ListTag areasTag = rootTag.getList("areas").orElse(new ListTag()); 
+            ListTag areasTag = rootTag.getList("areas", Tag.TAG_COMPOUND); 
             
             for (int i = 0; i < areasTag.size(); i++) {
-                CompoundTag areaTag = areasTag.getCompound(i).orElse(new CompoundTag());
-                String dimension = areaTag.getString("dimension").orElse("");
+                CompoundTag areaTag = areasTag.getCompound(i);
+                String dimension = areaTag.getString("dimension");
                 
                 ServerLevel level = null;
                 for (ServerLevel sl : MicroTimingReplay.server.getAllLevels()) {
-                    if (sl.dimension().identifier().toString().equals(dimension)) {
+                    if (sl.dimension().location().toString().equals(dimension)) {
                         level = sl;
                         break;
                     }
                 }
                 if (level == null) continue;
                 
-                ListTag blocksTag = areaTag.getList("blocks").orElse(new ListTag());
+                ListTag blocksTag = areaTag.getList("blocks", Tag.TAG_COMPOUND);
 
                 int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
                 int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
 
                 for (int j = 0; j < blocksTag.size(); j++) {
-                    CompoundTag blockTag = blocksTag.getCompound(j).orElse(new CompoundTag());
-                    int x = blockTag.getInt("x").orElse(0);
-                    int y = blockTag.getInt("y").orElse(0);
-                    int z = blockTag.getInt("z").orElse(0);
+                    CompoundTag blockTag = blocksTag.getCompound(j);
+                    int x = blockTag.getInt("x");
+                    int y = blockTag.getInt("y");
+                    int z = blockTag.getInt("z");
                     minX = Math.min(minX, x);
                     minY = Math.min(minY, y);
                     minZ = Math.min(minZ, z);
@@ -165,7 +161,7 @@ public class WorldBackupManager {
                     List<Entity> toRemove = new ArrayList<>();
                     for (Entity entity : level.getAllEntities()) {
                         if (entity instanceof Player) continue;
-                        if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
+                        if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
 
                         double ex = entity.getX();
                         double ey = entity.getY();
@@ -182,11 +178,11 @@ public class WorldBackupManager {
 
                 // Restore blocks
                 for (int j = 0; j < blocksTag.size(); j++) {
-                    CompoundTag blockTag = blocksTag.getCompound(j).orElse(new CompoundTag());
-                    int x = blockTag.getInt("x").orElse(0);
-                    int y = blockTag.getInt("y").orElse(0);
-                    int z = blockTag.getInt("z").orElse(0);
-                    int stateId = blockTag.getInt("stateId").orElse(0);
+                    CompoundTag blockTag = blocksTag.getCompound(j);
+                    int x = blockTag.getInt("x");
+                    int y = blockTag.getInt("y");
+                    int z = blockTag.getInt("z");
+                    int stateId = blockTag.getInt("stateId");
                     
                     BlockPos pos = new BlockPos(x, y, z);
                     BlockState state = Block.stateById(stateId);
@@ -194,7 +190,7 @@ public class WorldBackupManager {
                     level.setBlock(pos, state, MTRBlockFlags.SILENT_SET_BLOCK, MTRBlockFlags.SILENT_UPDATE_LIMIT);
 
                     if (blockTag.contains("nbt")) {
-                        CompoundTag nbt = blockTag.getCompound("nbt").orElse(null);
+                        CompoundTag nbt = blockTag.getCompound("nbt");
                         if (nbt != null) {
                             BlockEntity be = BlockEntity.loadStatic(pos, state, nbt, level.registryAccess());
                             if (be != null) {
@@ -205,17 +201,15 @@ public class WorldBackupManager {
                 }
 
                 // Restore the entities
-                ListTag entitiesTag = areaTag.getList("entities").orElse(new ListTag());
+                ListTag entitiesTag = areaTag.getList("entities", Tag.TAG_COMPOUND);
                 for (int j = 0; j < entitiesTag.size(); j++) {
-                    CompoundTag entityNbt = entitiesTag.getCompound(j).orElse(null);
-                    if (entityNbt == null || entityNbt.isEmpty()) continue;
+                    CompoundTag entityNbt = entitiesTag.getCompound(j);
+                    if (entityNbt.isEmpty()) continue;
 
                     if (asStandIns) {
                         EntityReplayManager.spawnStandInFromNbt(level, entityNbt);
                     } else {
-                        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), entityNbt);
-                        EntityType.create(input, level, EntitySpawnReason.LOAD)
-                                .ifPresent(level::addFreshEntity);
+                        EntityType.create(entityNbt, level).ifPresent(level::addFreshEntity);
                     }
                 }
             }

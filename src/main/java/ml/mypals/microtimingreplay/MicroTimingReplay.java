@@ -12,7 +12,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +42,12 @@ public class MicroTimingReplay implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register(MTRCommand::register);
 		ServerLifecycleEvents.SERVER_STARTED.register(s -> {MicroTimingReplay.server = s;WorldScopedStorage.migrateCategoryLayout();});
 		ServerLifecycleEvents.SERVER_STOPPING.register(MTRState::stoppingServer);
-		ServerLifecycleEvents.SERVER_STOPPED.register(_ -> MicroTimingReplay.server = null);
+		ServerLifecycleEvents.SERVER_STOPPED.register(s -> MicroTimingReplay.server = null);
 		ServerTickEvents.END_SERVER_TICK.register(MTRState::checkAutoStop);
 		SelectionEventHandler.register();
 	}
 
-	public static Identifier id(String path) {
-		return Identifier.fromNamespaceAndPath(MOD_ID, path);
+	public static ResourceLocation id(String path) {
+		return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
 	}
 }

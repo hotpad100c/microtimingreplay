@@ -81,13 +81,13 @@ public class EntityTickEvent extends Vec3PosEvent {
 
     public static EntityTickEvent readNBT(CompoundTag tag) {
         EntityTickEvent event = new EntityTickEvent(
-                tag.getLong("tick").orElse(0L),
-                tag.getString("entityUuid").orElse(""),
-                tag.getString("entityType").orElse(""),
-                tag.getDouble("x").orElse(0.0),
-                tag.getDouble("y").orElse(0.0),
-                tag.getDouble("z").orElse(0.0),
-                tag.getString("dimension").orElse("")
+                tag.getLong("tick"),
+                tag.getString("entityUuid"),
+                tag.getString("entityType"),
+                tag.getDouble("x"),
+                tag.getDouble("y"),
+                tag.getDouble("z"),
+                tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

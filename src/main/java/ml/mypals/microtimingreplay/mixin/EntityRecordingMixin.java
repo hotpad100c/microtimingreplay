@@ -26,17 +26,18 @@ import java.util.Locale;
 @Mixin(Entity.class)
 public abstract class EntityRecordingMixin {
 
-    @Inject(method = "onRemoval", at = @At("HEAD"))
-    private void mtr$onEntityRemovedFromWorld(CallbackInfo ci) {
+    // 1.21.1 has no onRemoval hook; remove(RemovalReason) is the single funnel for despawns.
+    @Inject(method = "remove(Lnet/minecraft/world/entity/Entity$RemovalReason;)V", at = @At("HEAD"))
+    private void mtr$onEntityRemovedFromWorld(Entity.RemovalReason reason, CallbackInfo ci) {
         Entity entity = (Entity) (Object) this;
         if (entity.level().isClientSide()) return;
-        if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
+        if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
 
         if (MTRState.isRecording(entity.level())) {
             if (!RecordingFilterConfig.isEnabled("entity_despawn")) return;
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
-                String dim = entity.level().dimension().identifier().toString();
+                String dim = entity.level().dimension().location().toString();
                 if (!activeProfile.outsideAreaVec3(entity.position(), dim)) {
                     long currentTick = MicroTimingReplay.server.getTickCount() - MTRState.getRecordStartTick();
 
@@ -60,7 +61,7 @@ public abstract class EntityRecordingMixin {
     @WrapMethod(method = "move")
     private void mtr$onEntityMove(MoverType type, Vec3 vec, Operation<Void> original) {
         Entity entity = (Entity) (Object) this;
-        if (entity.level().isClientSide() || entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
+        if (entity.level().isClientSide() || entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
             original.call(type, vec);
             return;
         }
@@ -76,7 +77,7 @@ public abstract class EntityRecordingMixin {
 
             MTRProfile activeProfile = MTRState.getActiveProfile();
             if (activeProfile != null) {
-                String dim = entity.level().dimension().identifier().toString();
+                String dim = entity.level().dimension().location().toString();
                 Vec3 oldPos = entity.position();
 
                 original.call(type, vec);
@@ -119,6 +120,18 @@ public abstract class EntityRecordingMixin {
         original.call(type, vec);
     }
 
+    /**
+     * The order {@code Entity.collide} resolves axes in: vertical first, then the smaller
+     * horizontal component last. 1.21.1 has no {@code Direction.axisStepOrder}, so the
+     * recorder mirrors the same choice here.
+     */
+    @Unique
+    private static Direction.Axis[] mtr$axisStepOrder(Vec3 movement) {
+        return Math.abs(movement.x) < Math.abs(movement.z)
+                ? new Direction.Axis[]{Direction.Axis.Y, Direction.Axis.Z, Direction.Axis.X}
+                : new Direction.Axis[]{Direction.Axis.Y, Direction.Axis.X, Direction.Axis.Z};
+    }
+
     @Unique
     private void recordAxisEvents(Entity entity, long tick, String uuid, String typeKey, Vec3 oldPos,
                                   Vec3 newPos, Vec3 reqVec, String dim) {
@@ -128,7 +141,7 @@ public abstract class EntityRecordingMixin {
         float yRot = entity.getYRot();
         float xRot = entity.getXRot();
 
-        for (Direction.Axis axis : Direction.axisStepOrder(reqVec)) {
+        for (Direction.Axis axis : mtr$axisStepOrder(reqVec)) {
             double req = reqVec.get(axis);
             double act = actual.get(axis);
 

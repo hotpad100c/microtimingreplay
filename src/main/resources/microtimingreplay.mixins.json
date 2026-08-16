@@ -1,7 +1,7 @@
 {
   "required": true,
   "package": "ml.mypals.microtimingreplay.mixin",
-  "compatibilityLevel": "JAVA_25",
+  "compatibilityLevel": "JAVA_21",
   "mixins": [
     "CollectingNeighborUpdaterMixin",
     "EntityRecordingMixin",

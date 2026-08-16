@@ -19,17 +19,20 @@ public abstract class PlayerTickMixin {
     @Shadow
     public ServerPlayer player;
 
-    @WrapMethod(method = "tickPlayer")
-    private boolean mtr$onTickPlayer(Operation<Boolean> original) {
+    // 1.21.1 folds the player tick straight into the listener's own tick().
+    @WrapMethod(method = "tick")
+    private void mtr$onTickPlayer(Operation<Void> original) {
         Level level = this.player.level();
         if (!MTRState.isRecording(level)) {
-            return original.call();
+            original.call();
+            return;
         }
 
         MTRProfile profile = MTRState.getActiveProfile();
-        String dim = level.dimension().identifier().toString();
+        String dim = level.dimension().location().toString();
         if (profile == null || profile.outsideAreaVec3(this.player.position(), dim)) {
-            return original.call();
+            original.call();
+            return;
         }
 
         MTRState.pushEvent(new EntityTickEvent(
@@ -40,7 +43,7 @@ public abstract class PlayerTickMixin {
                 dim
         ));
         try {
-            return original.call();
+            original.call();
         } finally {
             MTRState.popEvent();
         }

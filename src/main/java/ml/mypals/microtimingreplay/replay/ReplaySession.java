@@ -20,7 +20,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
@@ -107,7 +107,7 @@ public class ReplaySession {
             }
         }
 
-        bossBar = new ServerBossEvent(UUID.randomUUID(), MTRComponent.translatable("mtr.bossbar.start", "Replay: %s", profile.getName()),
+        bossBar = new ServerBossEvent(MTRComponent.translatable("mtr.bossbar.start", "Replay: %s", profile.getName()),
                 BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
         updateBossBar();
     }
@@ -160,12 +160,12 @@ public class ReplaySession {
             for (ServerLevel sl : MicroTimingReplay.server.getAllLevels()) {
                 List<Entity> toDiscard = new ArrayList<>();
                 for (Entity entity : sl.getAllEntities()) {
-                    if (entity.entityTags().contains("mtr_replay_marker") ||
-                        entity.entityTags().contains("mtr_marker") ||
-                        entity.entityTags().contains("mtr_area_marker") ||
-                        entity.entityTags().contains("mtr_dynamic_marker") ||
-                        entity.entityTags().contains("mtr_piston_display") ||
-                        entity.entityTags().contains("mtr_replay_entity")) {
+                    if (entity.getTags().contains("mtr_replay_marker") ||
+                        entity.getTags().contains("mtr_marker") ||
+                        entity.getTags().contains("mtr_area_marker") ||
+                        entity.getTags().contains("mtr_dynamic_marker") ||
+                        entity.getTags().contains("mtr_piston_display") ||
+                        entity.getTags().contains("mtr_replay_entity")) {
                         toDiscard.add(entity);
                     }
                 }
@@ -352,7 +352,7 @@ public class ReplaySession {
         MTRNetworking.broadcastCursor(this, watching);
         for (ServerPlayer player : watching) {
             if (PlayerPositioner.isFollowing(player)) {
-                PlayerPositioner.focusOnCursor(player, this, player.level());
+                PlayerPositioner.focusOnCursor(player, this, player.serverLevel());
             }
         }
     }
@@ -681,7 +681,7 @@ public class ReplaySession {
         if (parts.length != 2) return defaultLevel;
         ResourceKey<Level> key = ResourceKey.create(
                 Registries.DIMENSION,
-                Identifier.fromNamespaceAndPath(parts[0], parts[1])
+                ResourceLocation.fromNamespaceAndPath(parts[0], parts[1])
         );
         ServerLevel resolved = server.getLevel(key);
         return resolved != null ? resolved : defaultLevel;

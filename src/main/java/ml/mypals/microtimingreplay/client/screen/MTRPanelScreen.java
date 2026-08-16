@@ -6,10 +6,9 @@ import ml.mypals.microtimingreplay.client.MTRClientNetworking;
 import ml.mypals.microtimingreplay.client.MTRKeys;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import java.awt.*;
@@ -75,7 +74,7 @@ public class MTRPanelScreen extends Screen {
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
     }
 
     /**
@@ -144,11 +143,11 @@ public class MTRPanelScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         MTRWidgets.panel(graphics, panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT,
                 MTRWidgets.PANEL_BG, MTRWidgets.PANEL_BORDER);
 
-        graphics.centeredText(this.font, statusLine(), panelX + PANEL_WIDTH / 2, panelY + 7, MTRWidgets.TEXT);
+        graphics.drawCenteredString(this.font, statusLine(), panelX + PANEL_WIDTH / 2, panelY + 7, MTRWidgets.TEXT);
 
         for (Card card : buildCards()) {
             boolean hovered = MTRWidgets.isOver(mouseX, mouseY, card.x(), card.y(), card.width(), CARD_HEIGHT);
@@ -156,10 +155,10 @@ public class MTRPanelScreen extends Screen {
                     hovered, card.active());
         }
 
-        graphics.centeredText(this.font, hintLine(), panelX + PANEL_WIDTH / 2,
+        graphics.drawCenteredString(this.font, hintLine(), panelX + PANEL_WIDTH / 2,
                 panelY + PANEL_HEIGHT - 13, MTRWidgets.TEXT_DIM);
 
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     private Component statusLine() {
@@ -189,19 +188,19 @@ public class MTRPanelScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
         for (Card card : buildCards()) {
-            if (!MTRWidgets.isOver(event.x(), event.y(), card.x(), card.y(), card.width(), CARD_HEIGHT)) {
+            if (!MTRWidgets.isOver(mouseX, mouseY, card.x(), card.y(), card.width(), CARD_HEIGHT)) {
                 continue;
             }
-            Runnable action = event.button() == 1 ? card.onRight() : card.onLeft();
+            Runnable action = button == 1 ? card.onRight() : card.onLeft();
             if (action != null) {
                 playButtonClickSound(Minecraft.getInstance().getSoundManager());
                 action.run();
             }
             return true;
         }
-        return super.mouseClicked(event, doubled);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override

@@ -2,7 +2,7 @@ package ml.mypals.microtimingreplay.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import io.netty.channel.ChannelFutureListener;
+import net.minecraft.network.PacketSendListener;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.NetworkPacketEvent;
@@ -30,8 +30,8 @@ public abstract class ServerNetworkPacketMixin {
 
     // 三个 send 重载最终都汇入这个三参版本；单参的 send(Packet) 服务端从来不调，
     // ServerCommonPacketListenerImpl 直接调双参/三参，所以只钩单参会一条都记不到。
-    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V", at = @At("HEAD"))
-    private void mtr$onSendPacket(Packet<?> packet, ChannelFutureListener listener, boolean flush, CallbackInfo ci) {
+    @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketSendListener;Z)V", at = @At("HEAD"))
+    private void mtr$onSendPacket(Packet<?> packet, PacketSendListener listener, boolean flush, CallbackInfo ci) {
         mtr$recordPacket(packet);
     }
 
@@ -42,7 +42,7 @@ public abstract class ServerNetworkPacketMixin {
             player.level();
             Level level = player.level();
             if (MTRState.isRecording(level) && RecordingFilterConfig.isEnabled("network_packet")) {
-                String dim = level.dimension().identifier().toString();
+                String dim = level.dimension().location().toString();
                 MTRProfile profile = MTRState.getActiveProfile();
                 Vec3 pos = player.position();
                 if (profile != null && !profile.outsideAreaVec3(pos, dim)) {
@@ -77,7 +77,7 @@ public abstract class ServerNetworkPacketMixin {
             player.level();
             Level level = player.level();
             if (MTRState.isRecording(level) && RecordingFilterConfig.isEnabled("network_packet")) {
-                String dim = level.dimension().identifier().toString();
+                String dim = level.dimension().location().toString();
                 MTRProfile profile = MTRState.getActiveProfile();
                 Vec3 pos = player.position();
                 if (profile != null && !profile.outsideAreaVec3(pos, dim)) {

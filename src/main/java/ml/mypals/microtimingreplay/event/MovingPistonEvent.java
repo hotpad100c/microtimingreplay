@@ -165,14 +165,14 @@ public class MovingPistonEvent extends BlockPosEvent {
 
     public static MovingPistonEvent readNBT(CompoundTag tag) {
         MovingPistonEvent event = new MovingPistonEvent(
-                tag.getLong("tick").orElse(0L),
-                new BlockPos(tag.getInt("x").orElse(0), tag.getInt("y").orElse(0), tag.getInt("z").orElse(0)),
-                tag.contains("stateId") ? tag.getInt("stateId").orElse(0) : tag.getInt("movedBlockStateId").orElse(0),
-                Direction.from3DDataValue(tag.getInt("directionId").orElse(0)),
-                tag.getBoolean("extending").orElse(false),
-                tag.getBoolean("isSourcePiston").orElse(false),
-                tag.getBoolean("despawn").orElse(false),
-                tag.getString("dimension").orElse("")
+                tag.getLong("tick"),
+                new BlockPos(tag.getInt("x"), tag.getInt("y"), tag.getInt("z")),
+                tag.contains("stateId") ? tag.getInt("stateId") : tag.getInt("movedBlockStateId"),
+                Direction.from3DDataValue(tag.getInt("directionId")),
+                tag.getBoolean("extending"),
+                tag.getBoolean("isSourcePiston"),
+                tag.getBoolean("despawn"),
+                tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

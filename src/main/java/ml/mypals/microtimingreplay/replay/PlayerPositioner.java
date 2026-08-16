@@ -5,7 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Relative;
+import net.minecraft.world.entity.RelativeMovement;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
@@ -39,7 +39,7 @@ public class PlayerPositioner {
         if (player == null || isFollowing(player)) return;
 
         ANCHORS.put(player.getUUID(), new Anchor(
-                player.gameMode(),
+                player.gameMode.getGameModeForPlayer(),
                 player.level().dimension(),
                 player.position(),
                 player.getYRot(),
@@ -57,7 +57,7 @@ public class PlayerPositioner {
         ServerLevel level = player.level().getServer().getLevel(anchor.dimension());
         if (level != null) {
             player.teleportTo(level, anchor.position().x, anchor.position().y, anchor.position().z,
-                    Set.of(), anchor.yRot(), anchor.xRot(), false);
+                    Set.<RelativeMovement>of(), anchor.yRot(), anchor.xRot());
         }
         player.setGameMode(anchor.gameMode());
     }
@@ -88,7 +88,7 @@ public class PlayerPositioner {
         double feetY = eye.y - player.getEyeHeight();
         float[] rotation = lookAt(eye, target);
 
-        player.teleportTo(level, eye.x, feetY, eye.z, Set.of(), rotation[0], rotation[1], false);
+        player.teleportTo(level, eye.x, feetY, eye.z, Set.<RelativeMovement>of(), rotation[0], rotation[1]);
         return true;
     }
 

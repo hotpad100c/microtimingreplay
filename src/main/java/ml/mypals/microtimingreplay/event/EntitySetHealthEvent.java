@@ -140,16 +140,16 @@ public class EntitySetHealthEvent extends Vec3PosEvent {
 
     public static EntitySetHealthEvent readNBT(CompoundTag tag) {
         EntitySetHealthEvent event = new EntitySetHealthEvent(
-                tag.getLong("tick").orElse(0L),
-                tag.getString("entityUuid").orElse(""),
-                tag.getString("entityType").orElse(""),
-                tag.getFloat("oldHealth").orElse(0.0f),
-                tag.getFloat("newHealth").orElse(0.0f),
-                tag.getFloat("maxHealth").orElse(0.0f),
-                tag.getDouble("x").orElse(0.0),
-                tag.getDouble("y").orElse(0.0),
-                tag.getDouble("z").orElse(0.0),
-                tag.getString("dimension").orElse("")
+                tag.getLong("tick"),
+                tag.getString("entityUuid"),
+                tag.getString("entityType"),
+                tag.getFloat("oldHealth"),
+                tag.getFloat("newHealth"),
+                tag.getFloat("maxHealth"),
+                tag.getDouble("x"),
+                tag.getDouble("y"),
+                tag.getDouble("z"),
+                tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

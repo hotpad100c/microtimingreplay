@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.gameevent.vibrations.VibrationSystem;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
@@ -20,10 +20,10 @@ import org.spongepowered.asm.mixin.injection.At;
 public interface VibrationSystemTickerMixin {
 
     @WrapOperation(method = "receiveVibration", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/gameevent/vibrations/VibrationSystem$User;onReceiveVibration(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Holder;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/entity/Entity;F)V"))
-    private static void mtr$onReceiveVibration(VibrationSystem.User instance, ServerLevel serverLevel, BlockPos origin, Holder<GameEvent> gameEventHolder, @Nullable Entity sourceEntity, @Nullable Entity projOwner, float v, Operation<Void> original, @Local(name = "destination") BlockPos destination) {
+    private static void mtr$onReceiveVibration(VibrationSystem.User instance, ServerLevel serverLevel, BlockPos origin, Holder<GameEvent> gameEventHolder, @Nullable Entity sourceEntity, @Nullable Entity projOwner, float v, Operation<Void> original, @Local(name = "blockPos2") BlockPos destination) {
         if (MTRState.isRecording(serverLevel)) {
             MTRProfile profile = MTRState.getActiveProfile();
-            String dim = serverLevel.dimension().identifier().toString();
+            String dim = serverLevel.dimension().location().toString();
             boolean inside = profile != null && (!profile.outsideArea(destination, dim) || !profile.outsideArea(origin, dim));
             if (inside) {
                 MTRState.pushEvent(new ReceivedGameEventEvent(

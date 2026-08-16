@@ -4,20 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.chat.Component;
 
-import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
-import net.minecraft.world.entity.PositionMoveRotation;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.ValueInput;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -147,8 +141,8 @@ public class EntityReplayManager {
 
             List<Entity> levelEntities = new ArrayList<>();
             for (Entity entity : level.getAllEntities()) {
-                if (entity.entityTags().contains(REPLAY_ENTITY_TAG)
-                        || entity.entityTags().contains("mtr_replay_marker")) {
+                if (entity.getTags().contains(REPLAY_ENTITY_TAG)
+                        || entity.getTags().contains("mtr_replay_marker")) {
                     levelEntities.add(entity);
                 }
             }
@@ -171,7 +165,7 @@ public class EntityReplayManager {
         Entity entity = load(level, copy);
         if (entity == null) return null;
 
-        entity.absSnapTo(x, y, z, yaw, pitch);
+        entity.absMoveTo(x, y, z, yaw, pitch);
         finishStandIn(level, uuid, entity);
         return entity;
     }
@@ -194,8 +188,7 @@ public class EntityReplayManager {
     }
 
     private static Entity load(ServerLevel level, CompoundTag nbt) {
-        ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), nbt);
-        return EntityType.create(input, level, EntitySpawnReason.LOAD).orElse(null);
+        return EntityType.create(nbt, level).orElse(null);
     }
 
     /**
@@ -220,8 +213,7 @@ public class EntityReplayManager {
         if (level != null && entity != null && MicroTimingReplay.server != null) {
             entity.setOldPosAndRot();
             entity.setDeltaMovement(Vec3.ZERO);
-            var teleportPacket = ClientboundTeleportEntityPacket.teleport(entity.getId(),
-                    PositionMoveRotation.of(entity), Set.of(), entity.onGround());
+            var teleportPacket = new ClientboundTeleportEntityPacket(entity);
             for (ServerPlayer player : MicroTimingReplay.server.getPlayerList().getPlayers()) {
                 if (player.level() == level) {
                     player.connection.send(teleportPacket);

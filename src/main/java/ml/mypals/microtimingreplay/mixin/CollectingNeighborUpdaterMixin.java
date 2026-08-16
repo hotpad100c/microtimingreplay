@@ -25,7 +25,7 @@ public class CollectingNeighborUpdaterMixin {
         if (MTRState.isRecording(this.level)) {
             if (!RecordingFilterConfig.isEnabled("shape_update")) return;
             MTRProfile profile = MTRState.getActiveProfile();
-            String dim = this.level.dimension().identifier().toString();
+            String dim = this.level.dimension().location().toString();
             if (profile != null && !profile.outsideArea(pos, dim)) {
                 long tick = this.level.getServer() != null ? this.level.getServer().getTickCount() - MTRState.getRecordStartTick() : 0;
                 MTRState.pushEvent(new UpdateEvent(tick, "ShapeUpdate", pos));
@@ -37,7 +37,7 @@ public class CollectingNeighborUpdaterMixin {
     private void mtr$onShapeUpdateReturn(Direction direction, BlockState neighborState, BlockPos pos, BlockPos neighborPos, int updateFlags, int updateLimit, CallbackInfo ci) {
         if (MTRState.isRecording(this.level)) {
             MTRProfile profile = MTRState.getActiveProfile();
-            String dim = this.level.dimension().identifier().toString();
+            String dim = this.level.dimension().location().toString();
             if (profile != null && !profile.outsideArea(pos, dim)) {
                 MTRState.popEvent();
             }

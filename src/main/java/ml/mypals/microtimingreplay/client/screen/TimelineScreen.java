@@ -2,7 +2,7 @@ package ml.mypals.microtimingreplay.client.screen;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
-import org.jspecify.annotations.NonNull;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import ml.mypals.microtimingreplay.client.ClientReplayState;
 import ml.mypals.microtimingreplay.client.MTRClientConfig;
@@ -13,16 +13,14 @@ import ml.mypals.microtimingreplay.network.MTRPayloads;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import ml.mypals.microtimingreplay.util.MTRHelpText;
 import net.minecraft.ChatFormatting;
-import net.minecraft.util.Util;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.Util;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.WidgetTooltipHolder;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.client.player.LocalPlayer;
@@ -40,7 +38,7 @@ import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
-import static ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator.formatStackTraceLine;
+import static ml.mypals.microtimingreplay.util.StackTraceFormatter.formatStackTraceLine;
 
 
 @Environment(EnvType.CLIENT)
@@ -108,6 +106,9 @@ public class TimelineScreen extends Screen {
     private final ViewportCamera camera = new ViewportCamera();
     private Vec3 lastServerFocus = null;
 
+    private long lastRowClickMillis = 0;
+    private double lastRowClickX = 0;
+    private double lastRowClickY = 0;
     private long lastViewportClickMillis = 0;
     private double lastViewportClickX = 0;
     private double lastViewportClickY = 0;
@@ -142,7 +143,7 @@ public class TimelineScreen extends Screen {
      * GUI scale in the options screen and coming back lands on the right width.
      */
     private int computePanelWidth() {
-        int scale = Math.max(1, this.minecraft.getWindow().getGuiScale());
+        int scale = Math.max(1, (int) this.minecraft.getWindow().getGuiScale());
         int preferred = Math.max(MIN_PANEL_WIDTH, WIDTH_AT_SCALE_1 - (scale - 1) * WIDTH_PER_SCALE);
 
         // A small window at scale 1 can be narrower than two preferred columns.
@@ -504,32 +505,31 @@ public class TimelineScreen extends Screen {
     private void endDrag() {
         dragging = Drag.NONE;
         grabRemainder = 0;
-        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(),
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(),
                 GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
     }
 
 
     @Override
-    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // Everything the default does is screen-wide paint we do not want — except this,
-        // which is the accessibility sound subtitles and has nothing to do with the background.
-        this.minecraft.gui.extractDeferredSubtitles();
+    public void renderBackground(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // Everything the default does is screen-wide paint we do not want, and 1.21.1 draws
+        // the sound subtitles straight from the HUD, so nothing is left to forward here.
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int listBottom = listBottom();
 
         graphics.fill(0, 0, this.width, LIST_TOP - 2, MTRWidgets.CHROME_BG);
         graphics.fill(0, listBottom + 2, this.width, this.height, MTRWidgets.CHROME_BG);
 
-        graphics.text(this.font, headerLine(), 8, 8, MTRWidgets.TEXT);
+        graphics.drawString(this.font, headerLine(), 8, 8, MTRWidgets.TEXT);
 
         MTRWidgets.panel(graphics, LIST_X, LIST_TOP - 2, panelWidth, listBottom - LIST_TOP + 4,
                 MTRWidgets.PANEL_BG, MTRWidgets.PANEL_BORDER);
 
         if (rows().isEmpty()) {
-            graphics.text(this.font,
+            graphics.drawString(this.font,
                     MTRComponent.translatable("mtr.timeline.empty", "No timeline — watch a running replay first"),
                     LIST_X + 8, LIST_TOP + 6, MTRWidgets.TEXT_DIM);
         } else {
@@ -542,7 +542,7 @@ public class TimelineScreen extends Screen {
 
         drawDetails(graphics, mouseX, mouseY);
 
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
 
         if (helpOpen) {
             drawHelp(graphics);
@@ -550,13 +550,13 @@ public class TimelineScreen extends Screen {
 
         if (searching()) {
             Component status = searchStatus();
-            graphics.text(this.font, status,
+            graphics.drawString(this.font, status,
                     searchBox.getX() - 6 - this.font.width(status), searchBox.getY() + 3,
                     matches.isEmpty() ? MTRWidgets.TEXT_OFF : MTRWidgets.TEXT_ACCENT);
         }
     }
 
-    private void drawRows(GuiGraphicsExtractor graphics, int mouseX, int mouseY, int listBottom) {
+    private void drawRows(GuiGraphics graphics, int mouseX, int mouseY, int listBottom) {
         List<MTRPayloads.TimelineRow> rows = rows();
         int cursorRow = ClientReplayState.cursorRow();
         int labelRight = labelRight();
@@ -575,7 +575,7 @@ public class TimelineScreen extends Screen {
 
             if (row.tick() != previousTick) {
                 if (y + ROW_HEIGHT > listBottom) break;
-                graphics.text(this.font,
+                graphics.drawString(this.font,
                         MTRComponent.translatable("mtr.timeline.tick_marker", "── Tick %d ──", row.tick()),
                         labelLeft(), y + 1, MTRWidgets.TEXT_DIM);
                 previousTick = row.tick();
@@ -605,14 +605,14 @@ public class TimelineScreen extends Screen {
             graphics.enableScissor(LIST_X + 1, y, labelRight, y + ROW_HEIGHT);
             int x = labelLeft() + rowIndent(row) - hScroll;
             if (hasChildren(rowIndex)) {
-                graphics.text(this.font, Component.literal(collapsed.contains(rowIndex) ? "[+]" : "[-]"),
+                graphics.drawString(this.font, Component.literal(collapsed.contains(rowIndex) ? "[+]" : "[-]"),
                         x, y + 1, MTRWidgets.TEXT_ACCENT);
             }
-            graphics.text(this.font, row.label(), x + 20, y + 1, MTRWidgets.opaque(row.color()));
+            graphics.drawString(this.font, row.label(), x + 20, y + 1, MTRWidgets.opaque(row.color()));
             graphics.disableScissor();
 
             Component jump = Component.literal("#" + row.step() + "↗");
-            graphics.text(this.font, jump, contentRight - 2 - this.font.width(jump), y + 1,
+            graphics.drawString(this.font, jump, contentRight - 2 - this.font.width(jump), y + 1,
                     row.step() == selectedStep ? MTRWidgets.TEXT_ACCENT : MTRWidgets.TEXT_DIM);
 
             y += ROW_HEIGHT;
@@ -626,7 +626,7 @@ public class TimelineScreen extends Screen {
         return row.depth() * INDENT;
     }
 
-    private void drawScrollbars(GuiGraphicsExtractor graphics) {
+    private void drawScrollbars(GuiGraphics graphics) {
         int rowsOnScreen = visibleRowCount();
         int right = listRight();
         int rowsBottom = rowsBottom();
@@ -726,7 +726,7 @@ public class TimelineScreen extends Screen {
         return cachedView;
     }
 
-    private void drawDetails(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+    private void drawDetails(GuiGraphics graphics, int mouseX, int mouseY) {
         int x = detailX();
         int listBottom = listBottom();
         MTRWidgets.panel(graphics, x, LIST_TOP - 2, panelWidth, listBottom - LIST_TOP + 4,
@@ -735,18 +735,18 @@ public class TimelineScreen extends Screen {
         stackHeaderRect = ScreenRectangle.empty();
 
         if (selectedStep < 0) {
-            graphics.text(this.font,
+            graphics.drawString(this.font,
                     MTRComponent.translatable("mtr.timeline.no_selection", "Select a row to inspect it"),
                     x + 6, LIST_TOP + 1, MTRWidgets.TEXT_DIM);
             return;
         }
 
-        graphics.text(this.font, MTRComponent.translatable("mtr.timeline.details", "Step #%d", selectedStep),
+        graphics.drawString(this.font, MTRComponent.translatable("mtr.timeline.details", "Step #%d", selectedStep),
                 x + 6, LIST_TOP + 1, MTRWidgets.TEXT_ACCENT);
 
         MTRPayloads.DetailsS2C details = ClientReplayState.details(selectedStep);
         if (details == null) {
-            graphics.text(this.font, MTRComponent.translatable("mtr.timeline.loading", "Loading…"),
+            graphics.drawString(this.font, MTRComponent.translatable("mtr.timeline.loading", "Loading…"),
                     x + 6, LIST_TOP + ROW_HEIGHT + 1, MTRWidgets.TEXT_DIM);
             return;
         }
@@ -762,7 +762,7 @@ public class TimelineScreen extends Screen {
         int summaryY = summaryTop;
         for (int i = summaryScroll; i < view.summary().size() && summaryY < summaryBottom; i++) {
             DetailLine line = view.summary().get(i);
-            graphics.text(this.font, line.text(), x + 6, summaryY + 1, line.color());
+            graphics.drawString(this.font, line.text(), x + 6, summaryY + 1, line.color());
             summaryY += ROW_HEIGHT;
         }
         graphics.disableScissor();
@@ -781,7 +781,7 @@ public class TimelineScreen extends Screen {
                     stackHeaderRect.left() + stackHeaderRect.width(),
                     stackHeaderRect.top() + stackHeaderRect.height(), 0x30FFFFFF);
         }
-        graphics.text(this.font, header, x + 6, headerY,
+        graphics.drawString(this.font, header, x + 6, headerY,
                 copiedRecently() ? MTRWidgets.TEXT_ON : MTRWidgets.TEXT_ACCENT);
 
         clampDetailScroll();
@@ -793,7 +793,7 @@ public class TimelineScreen extends Screen {
         int lineY = bodyTop;
         for (int i = detailScroll; i < view.trace().size() && lineY < bodyBottom; i++) {
             DetailLine line = view.trace().get(i);
-            graphics.text(this.font, line.text(), detailContentLeft() - detailHScroll, lineY + 1, line.color());
+            graphics.drawString(this.font, line.text(), detailContentLeft() - detailHScroll, lineY + 1, line.color());
             lineY += ROW_HEIGHT;
         }
         graphics.disableScissor();
@@ -802,7 +802,7 @@ public class TimelineScreen extends Screen {
 
         // Vanilla draws this during the outer render pass, so it lands above everything.
         stackTooltip.set(Tooltip.create(view.tooltip()));
-        stackTooltip.refreshTooltipForNextRenderPass(graphics, mouseX, mouseY, headerHovered, false, stackHeaderRect);
+        stackTooltip.refreshTooltipForNextRenderPass(headerHovered, false, stackHeaderRect);
     }
 
     private int detailLineCount() {
@@ -818,7 +818,7 @@ public class TimelineScreen extends Screen {
         summaryScroll = Math.clamp(summaryScroll, 0, Math.max(0, detailSummaryLines() - detailSummaryRowCount()));
     }
 
-    private void drawSummaryScrollbar(GuiGraphicsExtractor graphics, int lineCount, int top, int bottom) {
+    private void drawSummaryScrollbar(GuiGraphics graphics, int lineCount, int top, int bottom) {
         int rowsOnScreen = detailSummaryRowCount();
         if (lineCount <= rowsOnScreen) return;
 
@@ -833,7 +833,7 @@ public class TimelineScreen extends Screen {
                 dragging == Drag.SUMMARY_V ? MTRWidgets.SCROLL_THUMB_ACTIVE : MTRWidgets.SCROLL_THUMB);
     }
 
-    private void drawDetailScrollbars(GuiGraphicsExtractor graphics, int lineCount, int bodyBottom) {
+    private void drawDetailScrollbars(GuiGraphics graphics, int lineCount, int bodyBottom) {
         int rowsOnScreen = detailBodyRowCount();
         if (lineCount > rowsOnScreen) {
             int right = detailX() + panelWidth;
@@ -881,9 +881,9 @@ public class TimelineScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent event) {
-        boolean control = (event.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
-        boolean shift = (event.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0;
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        boolean control = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean shift = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0;
 
         if (helpOpen) {
             // While the manual is up it owns the keyboard; any key puts it away.
@@ -891,20 +891,20 @@ public class TimelineScreen extends Screen {
             return true;
         }
 
-        if (ClientReplayState.cameraFollow() && !searching() && matchesHideGui(event)) {
+        if (ClientReplayState.cameraFollow() && !searching() && matchesHideGui(keyCode, scanCode)) {
             this.minecraft.options.hideGui = true;
             TimelineAutoHide.markHidden();
             this.minecraft.setScreen(null);
             return true;
         }
 
-        if (control && event.key() == GLFW.GLFW_KEY_F) {
+        if (control && keyCode == GLFW.GLFW_KEY_F) {
             openSearch();
             return true;
         }
 
         if (searching()) {
-            switch (event.key()) {
+            switch (keyCode) {
                 case GLFW.GLFW_KEY_ESCAPE -> {
                     // Swallow it: the bar closes, the screen stays.
                     closeSearch();
@@ -918,58 +918,58 @@ public class TimelineScreen extends Screen {
             }
         }
 
-        return super.keyPressed(event);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubled) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (helpOpen) {
             helpOpen = false;
             return true;
         }
-        if (super.mouseClicked(event, doubled)) return true;
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
 
-        if ((event.button() == GLFW.GLFW_MOUSE_BUTTON_MIDDLE
-                || event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) && beginCameraDrag(event)) {
+        if ((button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE
+                || button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) && beginCameraDrag(mouseX, mouseY)) {
             return true;
         }
-        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT && beginGrab(event.x(), event.y())) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT && beginGrab(mouseX, mouseY)) {
             return true;
         }
-        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_LEFT && isViewportDoubleClick(event)) {
-            if (retargetAt(event.x(), event.y())) {
+        if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && isViewportDoubleClick(mouseX, mouseY)) {
+            if (retargetAt(mouseX, mouseY)) {
                 return true;
             }
         }
 
         // Scrollbars first: they sit on top of the lists they belong to.
-        if (overTimelineVBar(event.x(), event.y())) {
+        if (overTimelineVBar(mouseX, mouseY)) {
             dragging = Drag.TIMELINE_V;
-            applyTimelineVDrag(event.y());
+            applyTimelineVDrag(mouseY);
             return true;
         }
-        if (overTimelineHBar(event.x(), event.y())) {
+        if (overTimelineHBar(mouseX, mouseY)) {
             dragging = Drag.TIMELINE_H;
-            applyTimelineHDrag(event.x());
+            applyTimelineHDrag(mouseX);
             return true;
         }
-        if (overSummaryVBar(event.x(), event.y())) {
+        if (overSummaryVBar(mouseX, mouseY)) {
             dragging = Drag.SUMMARY_V;
-            applySummaryVDrag(event.y());
+            applySummaryVDrag(mouseY);
             return true;
         }
-        if (overDetailVBar(event.x(), event.y())) {
+        if (overDetailVBar(mouseX, mouseY)) {
             dragging = Drag.DETAIL_V;
-            applyDetailVDrag(event.y());
+            applyDetailVDrag(mouseY);
             return true;
         }
-        if (overDetailHBar(event.x(), event.y())) {
+        if (overDetailHBar(mouseX, mouseY)) {
             dragging = Drag.DETAIL_H;
-            applyDetailHDrag(event.x());
+            applyDetailHDrag(mouseX);
             return true;
         }
 
-        if (MTRWidgets.isOver(event.x(), event.y(), stackHeaderRect.left(), stackHeaderRect.top(),
+        if (MTRWidgets.isOver(mouseX, mouseY, stackHeaderRect.left(), stackHeaderRect.top(),
                 stackHeaderRect.width(), stackHeaderRect.height())) {
             DetailView view = cachedView;
             if (view != null) {
@@ -980,24 +980,24 @@ public class TimelineScreen extends Screen {
         }
 
         int rowsBottom = rowsBottom();
-        if (event.y() < LIST_TOP || event.y() >= rowsBottom
-                || event.x() < LIST_X || event.x() >= contentRight()) {
+        if (mouseY < LIST_TOP || mouseY >= rowsBottom
+                || mouseX < LIST_X || mouseX >= contentRight()) {
             return false;
         }
 
-        int rowIndex = rowAt(event.y(), rowsBottom);
+        int rowIndex = rowAt(mouseY, rowsBottom);
         if (rowIndex < 0) return false;
 
         MTRPayloads.TimelineRow row = rows().get(rowIndex);
 
         // The jump box is pinned, so it is tested before anything that scrolls.
-        if (event.x() >= contentRight() - JUMP_ZONE) {
+        if (mouseX >= contentRight() - JUMP_ZONE) {
             MTRClientNetworking.jump(row.step());
             return true;
         }
 
         int toggleX = labelLeft() + rowIndent(row) - hScroll;
-        if (hasChildren(rowIndex) && event.x() >= toggleX && event.x() < toggleX + 20) {
+        if (hasChildren(rowIndex) && mouseX >= toggleX && mouseX < toggleX + 20) {
             if (!collapsed.remove(rowIndex)) {
                 collapsed.add(rowIndex);
             }
@@ -1006,10 +1006,26 @@ public class TimelineScreen extends Screen {
         }
 
         selectStep(row.step());
-        if (doubled) {
+        if (isRowDoubleClick(mouseX, mouseY)) {
             MTRClientNetworking.jump(row.step());
         }
         return true;
+    }
+
+    /**
+     * Same hand-rolled double-click test as the viewport, for the same reason: vanilla only
+     * pairs two clicks when the first was consumed, and it applies no position tolerance.
+     */
+    private boolean isRowDoubleClick(double mouseX, double mouseY) {
+        long now = Util.getMillis();
+        boolean doubled = now - lastRowClickMillis <= DOUBLE_CLICK_MS
+                && Math.abs(mouseX - lastRowClickX) <= DOUBLE_CLICK_SLOP
+                && Math.abs(mouseY - lastRowClickY) <= DOUBLE_CLICK_SLOP;
+
+        lastRowClickMillis = doubled ? 0 : now;
+        lastRowClickX = mouseX;
+        lastRowClickY = mouseY;
+        return doubled;
     }
 
     /**
@@ -1047,8 +1063,8 @@ public class TimelineScreen extends Screen {
      * key and button events — so ask the window whether the key is physically down.
      */
     private boolean isKeyHeld(int left, int right) {
-        return InputConstants.isKeyDown(this.minecraft.getWindow(), left)
-                || InputConstants.isKeyDown(this.minecraft.getWindow(), right);
+        return InputConstants.isKeyDown(this.minecraft.getWindow().getWindow(), left)
+                || InputConstants.isKeyDown(this.minecraft.getWindow().getWindow(), right);
     }
 
     @Override
@@ -1194,13 +1210,13 @@ public class TimelineScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(@NonNull MouseButtonEvent event, double dragX, double dragY) {
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         switch (dragging) {
-            case TIMELINE_V -> applyTimelineVDrag(event.y());
-            case TIMELINE_H -> applyTimelineHDrag(event.x());
-            case DETAIL_V -> applyDetailVDrag(event.y());
-            case DETAIL_H -> applyDetailHDrag(event.x());
-            case SUMMARY_V -> applySummaryVDrag(event.y());
+            case TIMELINE_V -> applyTimelineVDrag(mouseY);
+            case TIMELINE_H -> applyTimelineHDrag(mouseX);
+            case DETAIL_V -> applyDetailVDrag(mouseY);
+            case DETAIL_H -> applyDetailHDrag(mouseX);
+            case SUMMARY_V -> applySummaryVDrag(mouseY);
             case CAMERA_ORBIT -> {
                 camera.orbit(dragX, dragY);
                 applyCamera();
@@ -1211,29 +1227,30 @@ public class TimelineScreen extends Screen {
             }
             case GRAB_TIMELINE, GRAB_DETAIL, GRAB_SUMMARY -> applyGrab(dragX, dragY);
             case NONE -> {
-                return super.mouseDragged(event, dragX, dragY);
+                return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
             }
         }
         return true;
     }
 
     @Override
-    public boolean mouseReleased(@NonNull MouseButtonEvent event) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (dragging != Drag.NONE) {
             endDrag();
             return true;
         }
-        return super.mouseReleased(event);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
 
-    private boolean matchesHideGui(KeyEvent event) {
-        return this.minecraft.options.keyToggleGui.matches(event);
+    private boolean matchesHideGui(int keyCode, int scanCode) {
+        // 1.21.1 hard-codes F1 for the HUD toggle; there is no rebindable mapping to ask.
+        return keyCode == GLFW.GLFW_KEY_F1;
     }
 
     // Manual---
 
-    private void drawHelp(GuiGraphicsExtractor graphics) {
+    private void drawHelp(GuiGraphics graphics) {
         List<MTRHelpText.Line> help = MTRHelpText.lines(MTRHelpText.TIMELINE_KEY, MTRHelpText.TIMELINE_FALLBACK);
         if (help.isEmpty()) return;
 
@@ -1266,13 +1283,13 @@ public class TimelineScreen extends Screen {
         for (int i = 0; i < help.size(); i++) {
             MTRHelpText.Line line = help.get(i);
             if (line.heading() && i > 0) y += lineHeight;
-            graphics.text(this.font, Component.literal(line.text()),
+            graphics.drawString(this.font, Component.literal(line.text()),
                     boxX + padding + (line.heading() ? 0 : 8), y,
                     line.heading() ? MTRWidgets.TEXT_ACCENT : MTRWidgets.TEXT);
             y += lineHeight;
         }
         y += lineHeight;
-        graphics.text(this.font, hint, boxX + padding, y, MTRWidgets.TEXT_DIM);
+        graphics.drawString(this.font, hint, boxX + padding, y, MTRWidgets.TEXT_DIM);
     }
 
     // Grab-scrolling---
@@ -1283,7 +1300,7 @@ public class TimelineScreen extends Screen {
 
         dragging = target;
         grabRemainder = 0;
-        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(),
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(),
                 GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
         return true;
     }
@@ -1461,18 +1478,18 @@ public class TimelineScreen extends Screen {
      * tolerance — any two clicks within the window count, however far apart — so this checks
      * distance as well.
      */
-    private boolean isViewportDoubleClick(MouseButtonEvent event) {
-        if (!overViewport(event.x(), event.y())) return false;
+    private boolean isViewportDoubleClick(double mouseX, double mouseY) {
+        if (!overViewport(mouseX, mouseY)) return false;
 
         long now = Util.getMillis();
         boolean doubled = now - lastViewportClickMillis <= DOUBLE_CLICK_MS
-                && Math.abs(event.x() - lastViewportClickX) <= DOUBLE_CLICK_SLOP
-                && Math.abs(event.y() - lastViewportClickY) <= DOUBLE_CLICK_SLOP;
+                && Math.abs(mouseX - lastViewportClickX) <= DOUBLE_CLICK_SLOP
+                && Math.abs(mouseY - lastViewportClickY) <= DOUBLE_CLICK_SLOP;
 
         // Consume the pair, so a third fast click starts a new one instead of firing again.
         lastViewportClickMillis = doubled ? 0 : now;
-        lastViewportClickX = event.x();
-        lastViewportClickY = event.y();
+        lastViewportClickX = mouseX;
+        lastViewportClickY = mouseY;
         return doubled;
     }
 
@@ -1493,11 +1510,11 @@ public class TimelineScreen extends Screen {
         camera.reset(player.getEyePosition(), focus);
         return true;
     }
-    private boolean beginCameraDrag(MouseButtonEvent event) {
-        if (!ClientReplayState.cameraFollow() || !overViewport(event.x(), event.y())) return false;
+    private boolean beginCameraDrag(double mouseX, double mouseY) {
+        if (!ClientReplayState.cameraFollow() || !overViewport(mouseX, mouseY)) return false;
         if (!syncCamera()) return false;
-        dragging = (event.modifiers() & GLFW.GLFW_MOD_SHIFT) != 0 ? Drag.CAMERA_PAN : Drag.CAMERA_ORBIT;
-        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(),
+        dragging = hasShiftDown() ? Drag.CAMERA_PAN : Drag.CAMERA_ORBIT;
+        GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().getWindow(),
                 GLFW.GLFW_CURSOR,GLFW.GLFW_CURSOR_DISABLED);
         return true;
     }
@@ -1539,7 +1556,7 @@ public class TimelineScreen extends Screen {
         if (player == null || !camera.isPrimed()) return;
 
         Vec3 eye = camera.eyePosition();
-        player.snapTo(eye.x, eye.y - player.getEyeHeight(), eye.z, camera.yaw(), camera.pitch());
+        player.moveTo(eye.x, eye.y - player.getEyeHeight(), eye.z, camera.yaw(), camera.pitch());
         player.setYHeadRot(camera.yaw());
     }
 }

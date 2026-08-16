@@ -4,7 +4,7 @@ import ml.mypals.microtimingreplay.util.MTRComponent;
 import ml.mypals.microtimingreplay.util.MTRHelpText;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -76,11 +76,11 @@ public class HelpScreen extends Screen {
     }
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
 
-        graphics.text(this.font, this.title, 8, 8, MTRWidgets.TEXT);
-        graphics.text(this.font,
+        graphics.drawString(this.font, this.title, 8, 8, MTRWidgets.TEXT);
+        graphics.drawString(this.font,
                 MTRComponent.translatable("mtr.help.subtitle", "Screens and commands"),
                 8, 20, MTRWidgets.TEXT_DIM);
 
@@ -92,7 +92,7 @@ public class HelpScreen extends Screen {
         int y = LIST_TOP;
         for (int i = scroll; i < lines.size() && y < listBottom; i++) {
             MTRHelpText.Line line = lines.get(i);
-            graphics.text(this.font, Component.literal(line.text()),
+            graphics.drawString(this.font, Component.literal(line.text()),
                     SIDE_PAD + (line.heading() ? 0 : ITEM_INDENT), y,
                     line.heading() ? MTRWidgets.TEXT_ACCENT : MTRWidgets.TEXT);
             y += lineHeight();
@@ -102,7 +102,7 @@ public class HelpScreen extends Screen {
         drawScrollbar(graphics);
     }
 
-    private void drawScrollbar(GuiGraphicsExtractor graphics) {
+    private void drawScrollbar(GuiGraphics graphics) {
         int maxScroll = maxScroll();
         if (maxScroll <= 0) return;
 
@@ -125,34 +125,34 @@ public class HelpScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubled) {
-        if (super.mouseClicked(event, doubled)) return true;
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
 
-        if (maxScroll() > 0 && event.x() >= this.width - 6 - V_SCROLLBAR && event.x() < this.width - 6
-                && event.y() >= LIST_TOP && event.y() < listBottom()) {
+        if (maxScroll() > 0 && mouseX >= this.width - 6 - V_SCROLLBAR && mouseX < this.width - 6
+                && mouseY >= LIST_TOP && mouseY < listBottom()) {
             dragging = true;
-            applyDrag(event.y());
+            applyDrag(mouseY);
             return true;
         }
         return false;
     }
 
     @Override
-    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dragX, double dragY) {
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
         if (dragging) {
-            applyDrag(event.y());
+            applyDrag(mouseY);
             return true;
         }
-        return super.mouseDragged(event, dragX, dragY);
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
     }
 
     @Override
-    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         if (dragging) {
             dragging = false;
             return true;
         }
-        return super.mouseReleased(event);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private void applyDrag(double mouseY) {

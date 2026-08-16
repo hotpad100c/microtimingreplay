@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 import ml.mypals.microtimingreplay.util.MTRComponent;
 
 import net.minecraft.network.chat.MutableComponent;
@@ -95,16 +97,16 @@ public class AddScheduleTickEvent extends BlockPosEvent {
 
     public static AddScheduleTickEvent readNBT(CompoundTag tag) {
         AddScheduleTickEvent event = new AddScheduleTickEvent(
-                tag.getLong("tick").orElse(0L),
-                tag.getInt("x").orElse(0),
-                tag.getInt("y").orElse(0),
-                tag.getInt("z").orElse(0),
-                tag.getString("typeId").orElse("unknown"),
-                tag.getLong("triggerTick").orElse(0L),
-                tag.getInt("priority").orElse(0),
-                tag.getLong("subTickOrder").orElse(0L),
-                tag.getString("dimension").orElse(""),
-                tag.getBoolean("shouldFail").orElse(false)
+                tag.getLong("tick"),
+                tag.getInt("x"),
+                tag.getInt("y"),
+                tag.getInt("z"),
+                MTRNbt.getString(tag, "typeId", "unknown"),
+                tag.getLong("triggerTick"),
+                tag.getInt("priority"),
+                tag.getLong("subTickOrder"),
+                tag.getString("dimension"),
+                tag.getBoolean("shouldFail")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

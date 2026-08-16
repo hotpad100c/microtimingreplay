@@ -56,8 +56,8 @@ public class SelectionEventHandler {
                     
                     UUID markerUuid = dynamicMarkers.get(pUuid);
                     BlockDisplay existing = null;
-                    if (markerUuid != null && player.level() instanceof ServerLevel) {
-                        Entity e = player.level().getEntity(markerUuid);
+                    if (markerUuid != null && player.level() instanceof ServerLevel markerLevel) {
+                        Entity e = markerLevel.getEntity(markerUuid);
                         if (e instanceof BlockDisplay) {
                             existing = (BlockDisplay) e;
                         }
@@ -92,7 +92,7 @@ public class SelectionEventHandler {
                 BlockPos p1 = pos1Map.get(player.getUUID());
                 BlockPos p2 = pos2Map.get(player.getUUID());
                 if (p1 != null && p2 != null) {
-                    String assignedName = profile.addArea(null, p1, p2, world.dimension().identifier().toString());
+                    String assignedName = profile.addArea(null, p1, p2, world.dimension().location().toString());
                     if (assignedName != null) {
                         ProfileManager.saveProfile(profile);
                         player.sendSystemMessage(Component.literal("Area confirmed and saved as: " + assignedName));

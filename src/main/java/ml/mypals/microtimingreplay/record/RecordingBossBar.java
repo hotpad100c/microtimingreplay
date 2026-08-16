@@ -27,7 +27,6 @@ public final class RecordingBossBar {
         totalTicks = Math.max(1, ticks);
 
         bossBar = new ServerBossEvent(
-                UUID.randomUUID(),
                 title(totalTicks),
                 BossEvent.BossBarColor.RED,
                 BossEvent.BossBarOverlay.PROGRESS);

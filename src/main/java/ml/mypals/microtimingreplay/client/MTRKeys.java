@@ -1,8 +1,7 @@
 package ml.mypals.microtimingreplay.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import ml.mypals.microtimingreplay.MicroTimingReplay;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
@@ -17,13 +16,13 @@ import net.fabricmc.api.Environment;
 @Environment(EnvType.CLIENT)
 public class MTRKeys {
 
-    public static final KeyMapping.Category CATEGORY =
-            KeyMapping.Category.register(MicroTimingReplay.id("main"));
+    /** 1.21.1 categories are plain translation keys; the lang files already carry this one. */
+    public static final String CATEGORY = "key.category.microtimingreplay.main";
 
     public static KeyMapping panel;
 
     public static void register() {
-        panel = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+        panel = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.microtimingreplay.panel",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_LEFT_ALT,
@@ -40,12 +39,12 @@ public class MTRKeys {
     public static boolean isPanelHeld() {
         if (panel == null) return false;
 
-        InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(panel);
+        InputConstants.Key key = KeyBindingHelper.getBoundKeyOf(panel);
         Minecraft minecraft = Minecraft.getInstance();
 
         return switch (key.getType()) {
-            case KEYSYM -> InputConstants.isKeyDown(minecraft.getWindow(), key.getValue());
-            case MOUSE -> GLFW.glfwGetMouseButton(minecraft.getWindow().handle(), key.getValue()) == GLFW.GLFW_PRESS;
+            case KEYSYM -> InputConstants.isKeyDown(minecraft.getWindow().getWindow(), key.getValue());
+            case MOUSE -> GLFW.glfwGetMouseButton(minecraft.getWindow().getWindow(), key.getValue()) == GLFW.GLFW_PRESS;
             // Scan codes have no query API; fall back to the mapping's own state, which
             // is good enough to open the panel even if it cannot detect the release.
             default -> panel.isDown();

@@ -1,7 +1,7 @@
 package ml.mypals.microtimingreplay.client.screen;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
@@ -32,7 +32,7 @@ public class MTRWidgets {
 
     public static final int CURSOR_ROW_BG = 0x60FFD24A;
 
-    public static void panel(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
+    public static void panel(GuiGraphics graphics, int x, int y, int width, int height,
                              int background, int border) {
         graphics.fill(x, y, x + width, y + height, background);
         graphics.fill(x, y, x + width, y + 1, border);
@@ -41,11 +41,11 @@ public class MTRWidgets {
         graphics.fill(x + width - 1, y, x + width, y + height, border);
     }
 
-    public static void card(GuiGraphicsExtractor graphics, Font font, Component label,
+    public static void card(GuiGraphics graphics, Font font, Component label,
                             int x, int y, int width, int height, boolean hovered, boolean active) {
         int background = active ? CARD_BG_ACTIVE : hovered ? CARD_BG_HOVER : CARD_BG;
         panel(graphics, x, y, width, height, background, CARD_BORDER);
-        graphics.centeredText(font, label, x + width / 2, y + (height - font.lineHeight) / 2 + 1, TEXT);
+        graphics.drawCenteredString(font, label, x + width / 2, y + (height - font.lineHeight) / 2 + 1, TEXT);
     }
 
     public static boolean isOver(double mouseX, double mouseY, int x, int y, int width, int height) {

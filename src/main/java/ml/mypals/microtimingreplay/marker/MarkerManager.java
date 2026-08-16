@@ -17,11 +17,11 @@ public final class MarkerManager {
             List<Entity> toDiscard = new ArrayList<>();
             for (Entity entity : sl.getAllEntities()) {
                 if (entity instanceof Display) {
-                    if (entity.entityTags().contains("mtr_piston_display")) continue;
-                    if (sessionTag != null && !entity.entityTags().contains(sessionTag)) continue;
+                    if (entity.getTags().contains("mtr_piston_display")) continue;
+                    if (sessionTag != null && !entity.getTags().contains(sessionTag)) continue;
 
-                    if (entity.entityTags().contains("mtr_replay_marker") ||
-                        entity.entityTags().contains("mtr_marker")) {
+                    if (entity.getTags().contains("mtr_replay_marker") ||
+                        entity.getTags().contains("mtr_marker")) {
                         toDiscard.add(entity);
                     }
                 }

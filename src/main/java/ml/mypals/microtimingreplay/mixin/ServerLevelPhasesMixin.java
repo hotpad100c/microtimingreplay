@@ -1,10 +1,8 @@
 package ml.mypals.microtimingreplay.mixin;
 
 import net.minecraft.server.level.ServerChunkCache;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.dimension.end.EnderDragonFight;
-import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.level.dimension.end.EndDragonFight;
 
 import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
 import ml.mypals.microtimingreplay.event.EntityTickEvent;
@@ -96,7 +94,7 @@ public abstract class ServerLevelPhasesMixin {
     @WrapOperation(method = "tickChunk", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;tickPrecipitation(Lnet/minecraft/core/BlockPos;)V"))
     private void mtr$onIceAndSnow(ServerLevel instance, BlockPos pos, Operation<Void> original) {
         if (MTRState.isRecording((ServerLevel) (Object) this) && PhaseType.ICE_AND_SNOW.enabled()
-                && !MTRState.getActiveProfile().outsideArea(pos, instance.dimension().identifier().toString())) {
+                && !MTRState.getActiveProfile().outsideArea(pos, instance.dimension().location().toString())) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
                     PhaseType.ICE_AND_SNOW
@@ -113,7 +111,7 @@ public abstract class ServerLevelPhasesMixin {
     @WrapOperation(method = "tickChunk", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;randomTick(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;Lnet/minecraft/util/RandomSource;)V"))
     private void mtr$onRandomTickBlock(BlockState instance, ServerLevel serverLevel, BlockPos pos, RandomSource randomSource, Operation<Void> original) {
         if (MTRState.isRecording((ServerLevel) (Object) this) && PhaseType.RANDOM_TICK.enabled()
-                && !MTRState.getActiveProfile().outsideArea(pos, ((ServerLevel) (Object) this) .dimension().identifier().toString())) {
+                && !MTRState.getActiveProfile().outsideArea(pos, ((ServerLevel) (Object) this) .dimension().location().toString())) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),
                     PhaseType.RANDOM_TICK
@@ -129,7 +127,7 @@ public abstract class ServerLevelPhasesMixin {
     }
     @WrapMethod(method = "tickNonPassenger")
     private void mtr$onTickEntity(Entity entity, Operation<Void> original) {
-        if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
+        if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
             return;
         }
 
@@ -137,7 +135,7 @@ public abstract class ServerLevelPhasesMixin {
         if (MTRState.isRecording(level)) {
             MTRProfile profile = MTRState.getActiveProfile();
             if (profile != null) {
-                String dim = level.dimension().identifier().toString();
+                String dim = level.dimension().location().toString();
                 Vec3 oldPos = new Vec3(entity.xo, entity.yo, entity.zo);
                 Vec3 newPos = entity.position();
 
@@ -209,8 +207,8 @@ public abstract class ServerLevelPhasesMixin {
         }
     }
 
-    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/dimension/end/EnderDragonFight;tick()V"))
-    private void mtr$onTickDragonFight(EnderDragonFight instance, Operation<Void> original) {
+    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/dimension/end/EndDragonFight;tick()V"))
+    private void mtr$onTickDragonFight(EndDragonFight instance, Operation<Void> original) {
         if (MTRState.isRecording(this.getServer().getLevel(Level.END)) && PhaseType.DRAGON_FIGHT.enabled()) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),

@@ -24,6 +24,7 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public class DisplayUtils {
@@ -181,8 +182,8 @@ public class DisplayUtils {
                 BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString()
         ).withStyle(ChatFormatting.AQUA);
 
-        Stream<Property.Value<?>> stream = state.getValues();
-        List<Property.Value<?>> values = stream.toList();
+        // 1.21.1 answers with a plain map rather than a stream of property/value pairs.
+        Map<Property<?>, Comparable<?>> values = state.getValues();
         if (values.isEmpty()) {
             return result;
         }
@@ -190,14 +191,14 @@ public class DisplayUtils {
         result.append(Component.literal("[").withStyle(ChatFormatting.DARK_GRAY));
 
         boolean first = true;
-        for (Property.Value<?> entry : values) {
+        for (Map.Entry<Property<?>, Comparable<?>> entry : values.entrySet()) {
             if (!first) {
                 result.append(Component.literal(", ").withStyle(ChatFormatting.DARK_GRAY));
             }
             first = false;
 
-            Property<?> prop = entry.property();
-            Comparable<?> value = entry.value();
+            Property<?> prop = entry.getKey();
+            Comparable<?> value = entry.getValue();
 
             result.append(Component.literal(prop.getName()).withStyle(ChatFormatting.YELLOW));
             result.append(Component.literal("=").withStyle(ChatFormatting.GRAY));

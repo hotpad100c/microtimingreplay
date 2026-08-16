@@ -58,7 +58,7 @@ public abstract class HopperTransferMixin {
                 MTRProfile profile = MTRState.getActiveProfile();
                 BlockPos sourcePos = getContainerPos(source);
                 BlockPos destPos = getContainerPos(destination);
-                String dim = level.dimension().identifier().toString();
+                String dim = level.dimension().location().toString();
 
                 if (profile != null && sourcePos != null && destPos != null) {
                     if (!profile.outsideArea(sourcePos, dim) || !profile.outsideArea(destPos, dim)) {

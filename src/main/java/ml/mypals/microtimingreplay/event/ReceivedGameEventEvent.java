@@ -47,16 +47,16 @@ public class ReceivedGameEventEvent extends Vec3PosEvent {
 
     public static ReceivedGameEventEvent readNBT(CompoundTag tag) {
         ReceivedGameEventEvent event = new ReceivedGameEventEvent(
-            tag.getLong("tick").orElse(0L),
-            tag.getDouble("x").orElse(0d),
-            tag.getDouble("y").orElse(0d),
-            tag.getDouble("z").orElse(0d),
-            tag.getDouble("originX").orElse(0d),
-            tag.getDouble("originY").orElse(0d),
-            tag.getDouble("originZ").orElse(0d),
-            tag.getString("sourceUUID").orElse(""),
-            tag.getString("projectileOwnerUUID").orElse(""),
-            tag.getString("dimension").orElse("")
+            tag.getLong("tick"),
+            tag.getDouble("x"),
+            tag.getDouble("y"),
+            tag.getDouble("z"),
+            tag.getDouble("originX"),
+            tag.getDouble("originY"),
+            tag.getDouble("originZ"),
+            tag.getString("sourceUUID"),
+            tag.getString("projectileOwnerUUID"),
+            tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

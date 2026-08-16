@@ -81,7 +81,7 @@ public abstract class PistonStructureResolverMixin {
         if (!MTRState.isRecording(serverLevel) || !RecordingFilterConfig.isEnabled("piston_structure")) {
             return;
         }
-        String dim = serverLevel.dimension().identifier().toString();
+        String dim = serverLevel.dimension().location().toString();
         MTRProfile profile = MTRState.getActiveProfile();
         if (profile == null || profile.outsideArea(this.pistonPos, dim)) {
             return;

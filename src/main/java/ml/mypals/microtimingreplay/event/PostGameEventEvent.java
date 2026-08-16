@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 import ml.mypals.microtimingreplay.util.DisplayUtils;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
@@ -45,13 +47,13 @@ public class PostGameEventEvent extends Vec3PosEvent {
 
     public static PostGameEventEvent readNBT(CompoundTag tag) {
         PostGameEventEvent event = new PostGameEventEvent(
-            tag.getLong("tick").orElse(0L),
-            tag.getDouble("x").orElse(0d),
-            tag.getDouble("y").orElse(0d),
-            tag.getDouble("z").orElse(0d),
-            tag.getInt("blockState").orElse(-1),
-            tag.getString("entityUUID").orElse(""),
-            tag.getString("dimension").orElse("")
+            tag.getLong("tick"),
+            tag.getDouble("x"),
+            tag.getDouble("y"),
+            tag.getDouble("z"),
+            MTRNbt.getInt(tag, "blockState", -1),
+            tag.getString("entityUUID"),
+            tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

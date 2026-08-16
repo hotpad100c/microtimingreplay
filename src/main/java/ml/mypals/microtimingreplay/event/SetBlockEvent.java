@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 import ml.mypals.microtimingreplay.util.MTRComponent;
 
 import ml.mypals.microtimingreplay.util.DisplayUtils;
@@ -160,18 +162,18 @@ public class SetBlockEvent extends BlockPosEvent {
     }
 
     public static SetBlockEvent readNBT(CompoundTag tag) {
-        long tick = tag.getLong("tick").orElse(0L);
-        int bitFlag= tag.getInt("flag").orElse(0);
-        int updateLimit= tag.getInt("limit").orElse(0);
-        int x = tag.getInt("x").orElse(0);
-        int y = tag.getInt("y").orElse(0);
-        int z = tag.getInt("z").orElse(0);
-        int oldStateId = tag.getInt("oldStateId").orElse(0);
-        int newStateId = tag.getInt("newStateId").orElse(0);
+        long tick = tag.getLong("tick");
+        int bitFlag= tag.getInt("flag");
+        int updateLimit= tag.getInt("limit");
+        int x = tag.getInt("x");
+        int y = tag.getInt("y");
+        int z = tag.getInt("z");
+        int oldStateId = tag.getInt("oldStateId");
+        int newStateId = tag.getInt("newStateId");
         // Recordings written before "succeed" existed only stored writes that landed.
-        boolean succeed = tag.getBoolean("succeed").orElse(true);
+        boolean succeed = MTRNbt.getBoolean(tag, "succeed", true);
         SetBlockEvent event = new SetBlockEvent(tick,bitFlag,updateLimit, x, y, z, oldStateId,
-                newStateId, succeed, tag.getString("dimension").orElse(""));
+                newStateId, succeed, tag.getString("dimension"));
         MTREvent.readChildrenNBT(event, tag);
         return event;
     }

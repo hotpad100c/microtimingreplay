@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 import net.minecraft.ChatFormatting;
 
 import ml.mypals.microtimingreplay.util.MTRComponent;
@@ -11,7 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.NotNull;
-import org.jspecify.annotations.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 
 public class BlockPosEvent extends MTREvent {
@@ -42,7 +44,7 @@ public class BlockPosEvent extends MTREvent {
         ServerLevel targetLevel = level;
         if (dimension != null && !dimension.isEmpty()) {
             for (ServerLevel sl : level.getServer().getAllLevels()) {
-                if (sl.dimension().identifier().toString().equals(dimension)) {
+                if (sl.dimension().location().toString().equals(dimension)) {
                     targetLevel = sl;
                     break;
                 }
@@ -83,7 +85,7 @@ public class BlockPosEvent extends MTREvent {
             : "/tp @p " + getX() + " " + getY() + " " + getZ();
         return mutableComponent.append(Component.literal(" @[" + getX() + "," + getY() + "," + getZ() + "]")
             .withStyle(style -> style.withClickEvent(
-                new ClickEvent.RunCommand(tpCmd)
+                new ClickEvent(ClickEvent.Action.RUN_COMMAND, tpCmd)
             ))
         );
     }
@@ -112,10 +114,10 @@ public class BlockPosEvent extends MTREvent {
 
     public static BlockPosEvent readNBT(CompoundTag tag) {
         BlockPosEvent event = new BlockPosEvent(
-            tag.getLong("tick").orElse(0L),
-            tag.getString("type").orElse("unknown"),
-            new BlockPos(tag.getInt("x").orElse(0), tag.getInt("y").orElse(0), tag.getInt("z").orElse(0)),
-            tag.getString("dimension").orElse("")
+            tag.getLong("tick"),
+            MTRNbt.getString(tag, "type", "unknown"),
+            new BlockPos(tag.getInt("x"), tag.getInt("y"), tag.getInt("z")),
+            tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

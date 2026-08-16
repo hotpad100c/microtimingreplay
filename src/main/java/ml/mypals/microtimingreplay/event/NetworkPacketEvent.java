@@ -147,15 +147,15 @@ public class NetworkPacketEvent extends Vec3PosEvent {
 
     public static NetworkPacketEvent readNBT(CompoundTag tag) {
         NetworkPacketEvent event = new NetworkPacketEvent(
-                tag.getLong("tick").orElse(0L),
-                tag.getString("packetName").orElse(""),
-                tag.getString("direction").orElse(""),
-                tag.getString("player").orElse(""),
-                tag.getString("packetDetail").orElse(""),
-                tag.getDouble("x").orElse(0.0),
-                tag.getDouble("y").orElse(0.0),
-                tag.getDouble("z").orElse(0.0),
-                tag.getString("dimension").orElse("")
+                tag.getLong("tick"),
+                tag.getString("packetName"),
+                tag.getString("direction"),
+                tag.getString("player"),
+                tag.getString("packetDetail"),
+                tag.getDouble("x"),
+                tag.getDouble("y"),
+                tag.getDouble("z"),
+                tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

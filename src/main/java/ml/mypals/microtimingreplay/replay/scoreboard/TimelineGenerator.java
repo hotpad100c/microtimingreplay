@@ -119,7 +119,7 @@ public class TimelineGenerator {
         }
 
         return comp.withStyle(style -> style.withClickEvent(
-                new ClickEvent.RunCommand("/say hi")
+                new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/say hi")
         ));
     }
 }

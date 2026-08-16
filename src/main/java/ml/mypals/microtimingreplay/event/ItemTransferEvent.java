@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.util.DisplayUtils;
@@ -10,7 +12,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Brightness;
 import net.minecraft.world.entity.Display;
@@ -58,7 +60,7 @@ public class ItemTransferEvent extends BlockPosEvent {
     }
 
     public ItemStack createItemStack(ServerLevel level) {
-        Item item = BuiltInRegistries.ITEM.getOptional(Identifier.tryParse(itemId)).orElse(Items.PAPER);
+        Item item = BuiltInRegistries.ITEM.getOptional(ResourceLocation.tryParse(itemId)).orElse(Items.PAPER);
         return new ItemStack(item, count);
     }
 
@@ -170,23 +172,23 @@ public class ItemTransferEvent extends BlockPosEvent {
 
     public static ItemTransferEvent readNBT(CompoundTag tag) {
         BlockPos sourcePos = new BlockPos(
-                tag.getInt("x").orElse(0),
-                tag.getInt("y").orElse(0),
-                tag.getInt("z").orElse(0)
+                tag.getInt("x"),
+                tag.getInt("y"),
+                tag.getInt("z")
         );
         BlockPos targetPos = new BlockPos(
-                tag.getInt("toX").orElse(0),
-                tag.getInt("toY").orElse(0),
-                tag.getInt("toZ").orElse(0)
+                tag.getInt("toX"),
+                tag.getInt("toY"),
+                tag.getInt("toZ")
         );
         ItemTransferEvent event = new ItemTransferEvent(
-                tag.getLong("tick").orElse(0L),
+                tag.getLong("tick"),
                 sourcePos,
                 targetPos,
-                tag.getString("itemId").orElse("minecraft:air"),
-                tag.getInt("count").orElse(1),
-                tag.getCompound("itemNbt").orElse(new CompoundTag()),
-                tag.getString("dimension").orElse("")
+                MTRNbt.getString(tag, "itemId", "minecraft:air"),
+                MTRNbt.getInt(tag, "count", 1),
+                tag.getCompound("itemNbt"),
+                tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

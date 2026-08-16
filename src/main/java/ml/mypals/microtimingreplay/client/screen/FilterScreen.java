@@ -5,10 +5,9 @@ import ml.mypals.microtimingreplay.client.MTRClientNetworking;
 import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.network.MTRPayloads;
 import ml.mypals.microtimingreplay.util.MTRComponent;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -109,11 +108,11 @@ public class FilterScreen extends Screen {
     // ── drawing ──────────────────────────────────────────────────────────────
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
 
-        graphics.text(this.font, this.title, 8, 8, MTRWidgets.TEXT);
-        graphics.text(this.font,
+        graphics.drawString(this.font, this.title, 8, 8, MTRWidgets.TEXT);
+        graphics.drawString(this.font,
                 MTRComponent.translatable("mtr.filter.subtitle", "Per-world config — event_filter.json"),
                 8, 20, MTRWidgets.TEXT_DIM);
 
@@ -129,7 +128,7 @@ public class FilterScreen extends Screen {
 
         List<MTRPayloads.FilterRow> rows = currentRows();
         if (rows.isEmpty()) {
-            graphics.text(this.font, MTRComponent.translatable("mtr.filter.empty", "Waiting for the server…"),
+            graphics.drawString(this.font, MTRComponent.translatable("mtr.filter.empty", "Waiting for the server…"),
                     14, LIST_TOP + 6, MTRWidgets.TEXT_DIM);
             return;
         }
@@ -145,11 +144,11 @@ public class FilterScreen extends Screen {
                 graphics.fill(8, y, this.width - 8, y + ROW_HEIGHT, 0x30FFFFFF);
             }
 
-            graphics.text(this.font, modeLabel(row.mode(), row.option()), 14, y + 6, modeColor(row.mode()));
-            graphics.text(this.font,
+            graphics.drawString(this.font, modeLabel(row.mode(), row.option()), 14, y + 6, modeColor(row.mode()));
+            graphics.drawString(this.font,
                     MTRComponent.translatable("mtr.filter.event." + row.id(), row.defaultName()),
                     nameX, y + 6, row.enabled() ? MTRWidgets.TEXT : MTRWidgets.TEXT_DIM);
-            graphics.text(this.font, Component.literal(row.id()),
+            graphics.drawString(this.font, Component.literal(row.id()),
                     this.width - 20 - this.font.width(row.id()), y + 6, MTRWidgets.TEXT_DIM);
 
             y += ROW_HEIGHT;
@@ -160,11 +159,11 @@ public class FilterScreen extends Screen {
     // ── input ────────────────────────────────────────────────────────────────
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubled) {
-        if (super.mouseClicked(event, doubled)) return true;
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (super.mouseClicked(mouseX, mouseY, button)) return true;
 
         for (Tab tab : tabs()) {
-            if (MTRWidgets.isOver(event.x(), event.y(), tab.x(), 32, tab.width(), TAB_HEIGHT)) {
+            if (MTRWidgets.isOver(mouseX, mouseY, tab.x(), 32, tab.width(), TAB_HEIGHT)) {
                 activeCategory = tab.category();
                 scroll = 0;
                 return true;
@@ -172,9 +171,9 @@ public class FilterScreen extends Screen {
         }
 
         int listBottom = this.height - LIST_BOTTOM_MARGIN;
-        if (event.y() < LIST_TOP || event.y() >= listBottom) return false;
+        if (mouseY < LIST_TOP || mouseY >= listBottom) return false;
 
-        int index = scroll + (int) ((event.y() - LIST_TOP) / ROW_HEIGHT);
+        int index = scroll + (int) ((mouseY - LIST_TOP) / ROW_HEIGHT);
         List<MTRPayloads.FilterRow> rows = currentRows();
         if (index < 0 || index >= rows.size()) return false;
 

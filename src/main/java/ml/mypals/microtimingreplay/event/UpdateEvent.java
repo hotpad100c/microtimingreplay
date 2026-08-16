@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
@@ -76,7 +78,7 @@ public class UpdateEvent extends MTREvent {
     public MutableComponent appendPosText(MutableComponent mutableComponent){
         return mutableComponent.append(Component.literal(" @[" + getX() + "," + getY() + "," + getZ() + "]")
                 .withStyle(style -> style.withClickEvent(
-                        new ClickEvent.RunCommand("/tp @p " + getX() + " " + getY() + " " + getZ())
+                        new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tp @p " + getX() + " " + getY() + " " + getZ())
                 ))
         );
     }
@@ -104,9 +106,9 @@ public class UpdateEvent extends MTREvent {
 
     public static UpdateEvent readNBT(CompoundTag tag) {
         UpdateEvent event = new UpdateEvent(
-            tag.getLong("tick").orElse(0L),
-            tag.getString("updateName").orElse("unknown"),
-            new BlockPos(tag.getInt("x").orElse(0), tag.getInt("y").orElse(0), tag.getInt("z").orElse(0))
+            tag.getLong("tick"),
+            MTRNbt.getString(tag, "updateName", "unknown"),
+            new BlockPos(tag.getInt("x"), tag.getInt("y"), tag.getInt("z"))
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

@@ -2,6 +2,7 @@ package ml.mypals.microtimingreplay.profile;
 
 import ml.mypals.microtimingreplay.event.MTREvent;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.ListTag;
 
 import java.util.ArrayList;
@@ -45,10 +46,10 @@ public class TickFrame {
     }
 
     public static TickFrame readNBT(CompoundTag tag) {
-        TickFrame frame = new TickFrame(tag.getLong("tick").orElse(0L));
-        ListTag eventsList = tag.getList("events").orElse(new ListTag());
+        TickFrame frame = new TickFrame(tag.getLong("tick"));
+        ListTag eventsList = tag.getList("events", Tag.TAG_COMPOUND);
         for (int i = 0; i < eventsList.size(); i++) {
-            frame.addEvent(MTREvent.readNBT(eventsList.getCompound(i).orElse(new CompoundTag())));
+            frame.addEvent(MTREvent.readNBT(eventsList.getCompound(i)));
         }
         return frame;
     }

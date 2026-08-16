@@ -12,8 +12,8 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3f;
-import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -220,16 +220,16 @@ public class PistonStructureEvent extends BlockPosEvent {
 
     public static PistonStructureEvent readNBT(CompoundTag tag) {
         PistonStructureEvent event = new PistonStructureEvent(
-                tag.getLong("tick").orElse(0L),
-                new BlockPos(tag.getInt("x").orElse(0), tag.getInt("y").orElse(0), tag.getInt("z").orElse(0)),
-                Direction.from3DDataValue(tag.getInt("directionId").orElse(0)),
-                tag.getBoolean("extending").orElse(false),
-                tag.getBoolean("resolved").orElse(false),
-                unpackPositions(tag.getLongArray("toPush").orElse(new long[0])),
-                unpackPositions(tag.getLongArray("toDestroy").orElse(new long[0])),
-                tag.getLong("blockingPos").map(BlockPos::of).orElse(null),
-                tag.getString("blockingBlock").orElse(""),
-                tag.getString("dimension").orElse("")
+                tag.getLong("tick"),
+                new BlockPos(tag.getInt("x"), tag.getInt("y"), tag.getInt("z")),
+                Direction.from3DDataValue(tag.getInt("directionId")),
+                tag.getBoolean("extending"),
+                tag.getBoolean("resolved"),
+                unpackPositions(tag.getLongArray("toPush")),
+                unpackPositions(tag.getLongArray("toDestroy")),
+                tag.contains("blockingPos") ? BlockPos.of(tag.getLong("blockingPos")) : null,
+                tag.getString("blockingBlock"),
+                tag.getString("dimension")
         );
         MTREvent.readChildrenNBT(event, tag);
         return event;

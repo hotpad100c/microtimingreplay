@@ -7,7 +7,7 @@ import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.event.LevelTickEvent;
 import ml.mypals.microtimingreplay.event.PhaseEvent;
 import ml.mypals.microtimingreplay.event.PhaseType;
-import net.minecraft.network.PacketProcessor;
+import net.minecraft.server.network.ServerConnectionListener;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.players.PlayerList;
@@ -25,9 +25,10 @@ public abstract class ServerPhasesMixin {
 
     @Shadow
     public abstract ServerLevel overworld();
-    @WrapOperation(method = "processPacketsAndTick", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/network/PacketProcessor;processQueuedPackets()V"))
-    private void mtr$onProcessQueuedPackets(PacketProcessor instance, Operation<Void> original) {
+    // 1.21.1 has no PacketProcessor; queued packets are drained by the connection listener.
+    @WrapOperation(method = "tickChildren", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/server/network/ServerConnectionListener;tick()V"))
+    private void mtr$onProcessQueuedPackets(ServerConnectionListener instance, Operation<Void> original) {
         if (MTRState.isRecording(null) && PhaseType.PACKET_PROCESS.enabled()) {
             MTRState.pushEvent(new PhaseEvent(
                     this.tickCount - MTRState.getRecordStartTick(),
@@ -50,7 +51,7 @@ public abstract class ServerPhasesMixin {
                 original.call(level, hasTimeLeft);
                 return;
             }
-            String dim = level.dimension().identifier().toString();
+            String dim = level.dimension().location().toString();
             MTRState.pushEvent(new LevelTickEvent(
                     this.tickCount - MTRState.getRecordStartTick(),
                     PhaseType.LEVEL_TICK,
@@ -82,9 +83,10 @@ public abstract class ServerPhasesMixin {
         }
     }
 
+    // 1.21.1 ticks the players through the player list rather than a server-side helper.
     @WrapOperation(method = "tickChildren", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/server/MinecraftServer;tickConnection()V"))
-    private void mtr$onTickPlayerPhase(MinecraftServer instance, Operation<Void> original) {
+            target = "Lnet/minecraft/server/players/PlayerList;tick()V"))
+    private void mtr$onTickPlayerPhase(PlayerList instance, Operation<Void> original) {
         if (MTRState.isRecording(null)) {
             if (!PhaseType.PLAYER_TICK.enabled()) {
                 original.call(instance);
