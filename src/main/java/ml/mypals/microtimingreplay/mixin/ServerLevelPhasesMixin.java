@@ -1,35 +1,29 @@
 package ml.mypals.microtimingreplay.mixin;
 
-import net.minecraft.server.level.ServerChunkCache;
-import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.dimension.end.EnderDragonFight;
-import net.minecraft.world.level.storage.TagValueOutput;
-
-import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
-import ml.mypals.microtimingreplay.event.EntityTickEvent;
-import ml.mypals.microtimingreplay.profile.MTRProfile;
-import ml.mypals.microtimingreplay.replay.EntityReplayManager;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
-
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
+import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
+import ml.mypals.microtimingreplay.event.EntityTickEvent;
 import ml.mypals.microtimingreplay.event.PhaseEvent;
 import ml.mypals.microtimingreplay.event.PhaseType;
+import ml.mypals.microtimingreplay.profile.MTRProfile;
+import ml.mypals.microtimingreplay.replay.EntityReplayManager;
+import ml.mypals.microtimingreplay.util.PlayerProxy;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.dimension.end.EnderDragonFight;
 import net.minecraft.world.level.entity.EntityTickList;
-import java.util.function.Consumer;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -38,7 +32,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.function.BooleanSupplier;
-import ml.mypals.microtimingreplay.util.PlayerProxy;
+import java.util.function.Consumer;
 
 @Mixin(ServerLevel.class)
 public abstract class ServerLevelPhasesMixin {

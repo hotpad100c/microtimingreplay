@@ -1,24 +1,18 @@
 package ml.mypals.microtimingreplay.marker;
 
-import net.minecraft.world.entity.Entity;
-
+import com.mojang.math.Transformation;
+import ml.mypals.microtimingreplay.replay.ReplayContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Brightness;
 import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.util.Brightness;
-import com.mojang.math.Transformation;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import ml.mypals.microtimingreplay.replay.ReplayContext;
+import java.util.*;
 
 public class PistonDisplayManager {
 

@@ -1,11 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
-import net.minecraft.ChatFormatting;
-
-import java.util.Locale;
-
 import ml.mypals.microtimingreplay.util.MTRComponent;
-
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -14,8 +10,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Locale;
 
 
 public class Vec3PosEvent extends MTREvent {

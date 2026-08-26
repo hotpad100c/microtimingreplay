@@ -1,14 +1,14 @@
 package ml.mypals.microtimingreplay.client;
 
 import ml.mypals.microtimingreplay.network.MTRPayloads;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 /**
  * The client's mirror of what the server told us. Nothing here is authoritative — the

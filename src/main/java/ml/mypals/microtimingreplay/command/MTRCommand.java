@@ -1,5 +1,4 @@
 package ml.mypals.microtimingreplay.command;
-import ml.mypals.microtimingreplay.config.RecordingEventRegistry;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -10,9 +9,8 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.suggestion.Suggestions;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.config.RecordMode;
+import ml.mypals.microtimingreplay.config.RecordingEventRegistry;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
-import ml.mypals.microtimingreplay.replay.dialog.EventFilterScreenGenerator;
-import ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
@@ -21,23 +19,26 @@ import ml.mypals.microtimingreplay.replay.ReplayContext;
 import ml.mypals.microtimingreplay.replay.ReplayManager;
 import ml.mypals.microtimingreplay.replay.ReplaySession;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
+import ml.mypals.microtimingreplay.replay.dialog.EventFilterScreenGenerator;
+import ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator;
 import ml.mypals.microtimingreplay.replay.dialog.TimelineScreenGenerator;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import ml.mypals.microtimingreplay.util.MTRHelpText;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import java.util.List;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
+
+import java.util.List;
 
 public class MTRCommand {
 

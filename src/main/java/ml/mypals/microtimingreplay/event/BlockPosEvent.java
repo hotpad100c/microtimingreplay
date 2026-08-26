@@ -1,8 +1,7 @@
 package ml.mypals.microtimingreplay.event;
 
-import net.minecraft.ChatFormatting;
-
 import ml.mypals.microtimingreplay.util.MTRComponent;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -10,7 +9,6 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
-import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
 
 

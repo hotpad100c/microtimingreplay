@@ -1,8 +1,6 @@
 package ml.mypals.microtimingreplay.replay.dialog;
 
-import net.minecraft.server.dialog.body.DialogBody;
-
-import ml.mypals.microtimingreplay.event.*;
+import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.replay.ReplaySession;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
@@ -10,6 +8,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.*;
 import net.minecraft.server.dialog.*;
 import net.minecraft.server.dialog.action.StaticAction;
+import net.minecraft.server.dialog.body.DialogBody;
 import net.minecraft.server.dialog.body.PlainMessage;
 import net.minecraft.server.level.ServerPlayer;
 import org.jspecify.annotations.NonNull;

@@ -1,39 +1,35 @@
 package ml.mypals.microtimingreplay.replay;
 
-import ml.mypals.microtimingreplay.event.MovingPistonEvent;
-import ml.mypals.microtimingreplay.event.MovingPistonTickEvent;
-
-import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
 import ml.mypals.microtimingreplay.event.*;
-import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
-import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.marker.MarkerManager;
 import ml.mypals.microtimingreplay.marker.PistonDisplayManager;
+import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
 import ml.mypals.microtimingreplay.profile.TickFrame;
 import ml.mypals.microtimingreplay.replay.scoreboard.TimelineGenerator;
 import ml.mypals.microtimingreplay.replay.scoreboard.VirtualScoreboardManager;
+import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.BossEvent;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.entity.Entity;
 import org.joml.Vector3f;
-
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.Level;
 
 import java.util.*;
 

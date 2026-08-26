@@ -1,15 +1,12 @@
 package ml.mypals.microtimingreplay.event;
 
-import ml.mypals.microtimingreplay.util.MTRComponent;
-
-import net.minecraft.network.chat.MutableComponent;
-
-
 import ml.mypals.microtimingreplay.marker.MTRMarker;
+import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 import org.joml.Vector3f;
 

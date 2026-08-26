@@ -1,20 +1,16 @@
 package ml.mypals.microtimingreplay.replay;
-import ml.mypals.microtimingreplay.marker.PistonDisplayManager;
-import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import ml.mypals.microtimingreplay.marker.PistonDisplayManager;
 import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
+import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Every running replay, and which one each player is watching.

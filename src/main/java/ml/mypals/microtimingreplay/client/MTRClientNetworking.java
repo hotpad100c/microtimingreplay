@@ -1,13 +1,13 @@
 package ml.mypals.microtimingreplay.client;
 
-import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.client.screen.FilterScreen;
 import ml.mypals.microtimingreplay.client.screen.TimelineScreen;
+import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.network.MTRPayloads;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.gui.screens.Screen;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 
 

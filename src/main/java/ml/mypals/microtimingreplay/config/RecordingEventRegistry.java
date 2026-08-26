@@ -2,7 +2,9 @@ package ml.mypals.microtimingreplay.config;
 
 import ml.mypals.microtimingreplay.event.PhaseType;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class RecordingEventRegistry {
 

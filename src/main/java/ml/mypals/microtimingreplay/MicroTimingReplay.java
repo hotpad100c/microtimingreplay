@@ -1,7 +1,6 @@
 package ml.mypals.microtimingreplay;
 
 import ml.mypals.microtimingreplay.command.MTRCommand;
-import ml.mypals.microtimingreplay.event.ItemTransferEvent;
 import ml.mypals.microtimingreplay.event.MTREvents;
 import ml.mypals.microtimingreplay.event.SelectionEventHandler;
 import ml.mypals.microtimingreplay.network.MTRNetworking;

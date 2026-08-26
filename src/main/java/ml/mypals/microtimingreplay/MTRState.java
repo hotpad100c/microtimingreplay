@@ -1,11 +1,9 @@
 package ml.mypals.microtimingreplay;
 
-import ml.mypals.microtimingreplay.replay.EntityReplayManager;
-
 import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
-import ml.mypals.microtimingreplay.record.RecordingBossBar;
 import ml.mypals.microtimingreplay.profile.ProfileManager;
+import ml.mypals.microtimingreplay.record.RecordingBossBar;
 import ml.mypals.microtimingreplay.replay.ReplayManager;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
 import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;

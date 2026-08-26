@@ -8,11 +8,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 import java.util.UUID;
-import org.joml.Vector3f;
 
 public class EntitySpawnEvent extends Vec3PosEvent {
     public static final String TYPE = "entitySpawn";

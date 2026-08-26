@@ -1,13 +1,12 @@
 package ml.mypals.microtimingreplay.event;
 
 
-import net.minecraft.core.registries.BuiltInRegistries;
-
 import ml.mypals.microtimingreplay.marker.PistonDisplayManager;
 import ml.mypals.microtimingreplay.util.MTRComponent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -18,11 +17,11 @@ import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.piston.PistonHeadBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.PistonType;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import org.joml.Vector3f;
 
 public class MovingPistonEvent extends BlockPosEvent {
 

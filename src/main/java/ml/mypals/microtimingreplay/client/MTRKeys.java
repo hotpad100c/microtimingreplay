@@ -2,12 +2,12 @@ package ml.mypals.microtimingreplay.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 
 /**
  * The one binding the add-on needs. Left alt is unbound in vanilla, which matters more

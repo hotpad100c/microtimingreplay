@@ -1,6 +1,5 @@
 package ml.mypals.microtimingreplay.util;
 
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
 import java.util.ArrayList;
