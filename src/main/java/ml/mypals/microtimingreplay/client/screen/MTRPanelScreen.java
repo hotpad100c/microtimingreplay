@@ -87,11 +87,11 @@ public class MTRPanelScreen extends Screen {
 
         if (ClientReplayState.isWatching()) {
             cards.add(new Card(MTRComponent.translatable("mtr.panel.timeline", "Timeline"), 0, 0, 62, false,
-                    () -> this.minecraft.setScreen(new TimelineScreen()), null));
+                    () -> this.minecraft.gui.setScreen(new TimelineScreen()), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.filter", "Filter"), 0, 0, 56, false,
-                    () -> this.minecraft.setScreen(new FilterScreen(null)), null));
+                    () -> this.minecraft.gui.setScreen(new FilterScreen(null)), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.settings", "Settings"), 0, 0, 56, false,
-                    () -> this.minecraft.setScreen(new ClientConfigScreen()), null));
+                    () -> this.minecraft.gui.setScreen(new ClientConfigScreen()), null));
             cards.add(new Card(
                     MTRComponent.translatable("mtr.panel.unit", "Unit: %s", unitLabel()), 0, 0, 88, false,
                     () -> MTRClientConfig.cycleStepUnit(1), () -> MTRClientConfig.cycleStepUnit(-1)));
@@ -99,7 +99,7 @@ public class MTRPanelScreen extends Screen {
                     MTRComponent.translatable("mtr.panel.amount", "Step: %d", MTRClientConfig.stepAmount()), 0, 0, 62, false,
                     () -> MTRClientConfig.cycleStepAmount(1), () -> MTRClientConfig.cycleStepAmount(-1)));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.help", "Guide"), 0, 0, 56, false,
-                    () -> this.minecraft.setScreen(new HelpScreen(this)), null));
+                    () -> this.minecraft.gui.setScreen(new HelpScreen(this)), null));
         } else {
             // Nothing to step through yet: offer the running replays to watch instead.
             for (String profile : ClientReplayState.runningSessions()) {
@@ -108,11 +108,11 @@ public class MTRPanelScreen extends Screen {
                         () -> MTRClientNetworking.subscribe(profile), null));
             }
             cards.add(new Card(MTRComponent.translatable("mtr.panel.filter", "Filter"), 0, 0, 56, false,
-                    () -> this.minecraft.setScreen(new FilterScreen(null)), null));
+                    () -> this.minecraft.gui.setScreen(new FilterScreen(null)), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.settings", "Settings"), 0, 0, 56, false,
-                    () -> this.minecraft.setScreen(new ClientConfigScreen()), null));
+                    () -> this.minecraft.gui.setScreen(new ClientConfigScreen()), null));
             cards.add(new Card(MTRComponent.translatable("mtr.panel.help", "Guide"), 0, 0, 56, false,
-                    () -> this.minecraft.setScreen(new HelpScreen(this)), null));
+                    () -> this.minecraft.gui.setScreen(new HelpScreen(this)), null));
         }
 
         return position(cards);

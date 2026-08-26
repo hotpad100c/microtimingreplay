@@ -6,12 +6,11 @@ import ml.mypals.microtimingreplay.util.DisplayUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Brightness;
-import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Display.BlockDisplay;
-import net.minecraft.world.entity.Display.TextDisplay;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
@@ -48,7 +47,7 @@ public final class MTRMarker {
     }
 
     public static void spawnAreaMarker(ServerLevel level, MTRProfile.Area area) {
-        BlockDisplay entity = new BlockDisplay(EntityType.BLOCK_DISPLAY, level);
+        BlockDisplay entity = new BlockDisplay(EntityTypes.BLOCK_DISPLAY, level);
         
         float width = Math.abs(area.x2 - area.x1) + 1.02f;
         float height = Math.abs(area.y2 - area.y1) + 1.02f;
@@ -61,7 +60,7 @@ public final class MTRMarker {
         float minZ = Math.min(area.z1, area.z2) - 0.01f;
         
         entity.setPos(minX, minY, minZ);
-        entity.setBlockState(Blocks.PURPLE_STAINED_GLASS.defaultBlockState());
+        entity.setBlockState(Blocks.STAINED_GLASS.purple().defaultBlockState());
         entity.setBrightnessOverride(new Brightness(15, 15));
         
         Transformation transform = new Transformation(new Vector3f(0, 0, 0), new Quaternionf(), scale, new Quaternionf());
@@ -73,16 +72,18 @@ public final class MTRMarker {
         entity.addTag("mtr_replay_marker");
         
         entity.setGlowingTag(true);
-        if (ChatFormatting.LIGHT_PURPLE.getColor() != null) {
-            entity.setGlowColorOverride(ChatFormatting.LIGHT_PURPLE.getColor());
-        }
+        
+        // trans ChatFormatting to TextColor
+        // .<color>#getValue will return an int value not Integer so remove the if block
+        entity.setGlowColorOverride(TextColor.LIGHT_PURPLE.getValue());
+        
         level.addFreshEntity(entity);
     }
 
     public static BlockDisplay spawnOrUpdateDynamicAreaMarker(ServerLevel level, BlockDisplay existing, BlockPos p1, BlockPos p2) {
         if (existing == null || existing.isRemoved()) {
-            existing = new BlockDisplay(EntityType.BLOCK_DISPLAY, level);
-            existing.setBlockState(Blocks.MAGENTA_STAINED_GLASS.defaultBlockState());
+            existing = new BlockDisplay(EntityTypes.BLOCK_DISPLAY, level);
+            existing.setBlockState(Blocks.STAINED_GLASS.magenta().defaultBlockState());
             existing.setBrightnessOverride(new Brightness(15, 15));
             existing.setNoGravity(true);
             existing.setInvulnerable(true);
@@ -90,9 +91,7 @@ public final class MTRMarker {
             existing.addTag("mtr_dynamic_marker");
             existing.addTag("mtr_replay_marker");
             existing.setGlowingTag(true);
-            if (ChatFormatting.LIGHT_PURPLE.getColor() != null) {
-                existing.setGlowColorOverride(ChatFormatting.LIGHT_PURPLE.getColor());
-            }
+            existing.setGlowColorOverride(TextColor.LIGHT_PURPLE.getValue());
             level.addFreshEntity(existing);
         }
         

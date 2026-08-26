@@ -14,7 +14,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Brightness;
 import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -120,11 +120,11 @@ public class ItemTransferEvent extends BlockPosEvent {
 
         // 1. Source container: Red Glass BlockDisplay
         MTRMarker.spawnBlockDisplay(level, Vec3.atLowerCornerOf(getPos()),
-                Blocks.RED_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.RED);
+                Blocks.STAINED_GLASS.red().defaultBlockState(), scale, ChatFormatting.RED);
 
         // 2. Target container: Green Glass BlockDisplay
         MTRMarker.spawnBlockDisplay(level, Vec3.atLowerCornerOf(targetPos),
-                Blocks.GREEN_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.GREEN);
+                Blocks.STAINED_GLASS.green().defaultBlockState(), scale, ChatFormatting.GREEN);
 
         // 3. Floating ItemDisplay at midpoint
         double midX = (getX() + targetPos.getX()) / 2.0 + 0.5;
@@ -132,7 +132,7 @@ public class ItemTransferEvent extends BlockPosEvent {
         double midZ = (getZ() + targetPos.getZ()) / 2.0 + 0.5;
 
         ItemStack stack = createItemStack(level);
-        Display.ItemDisplay itemDisplay = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
+        Display.ItemDisplay itemDisplay = new Display.ItemDisplay(EntityTypes.ITEM_DISPLAY, level);
         itemDisplay.setPos(midX, midY, midZ);
         itemDisplay.setItemStack(stack);
 

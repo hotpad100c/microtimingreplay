@@ -6,21 +6,17 @@ import net.minecraft.network.chat.Component;
 
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
-import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.*;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.ValueInput;
 
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -195,7 +191,9 @@ public class EntityReplayManager {
 
     private static Entity load(ServerLevel level, CompoundTag nbt) {
         ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), nbt);
-        return EntityType.create(input, level, EntitySpawnReason.LOAD).orElse(null);
+        // Minecraft 26.2 use record class EntitySpawnRequest wrapper EntitySpawnReason
+        // I don't check how the ignoreChecks filed work, just set it to true
+        return EntityType.create(input, level, new EntitySpawnRequest(EntitySpawnReason.LOAD,true)).orElse(null);
     }
 
     /**

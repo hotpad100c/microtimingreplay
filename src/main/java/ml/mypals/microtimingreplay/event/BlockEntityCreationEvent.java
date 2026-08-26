@@ -69,7 +69,7 @@ public class BlockEntityCreationEvent extends BlockPosEvent {
         if (profile != null && profile.outsideArea(getPos(), getDimension())) return;
 
         MTRMarker.spawnBlockDisplay(level, Vec3.atLowerCornerOf(getPos()),
-                Blocks.CYAN_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.AQUA);
+                Blocks.STAINED_GLASS.cyan().defaultBlockState(), scale, ChatFormatting.AQUA);
     }
 
     @Override

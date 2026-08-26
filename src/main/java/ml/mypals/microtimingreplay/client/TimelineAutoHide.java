@@ -22,7 +22,7 @@ public final class TimelineAutoHide {
     }
 
     private static boolean wantsCleanView(Minecraft minecraft) {
-        if (minecraft.options.hideGui) return true;
+        if (minecraft.gui.hud.isHidden()) return true;
         return minecraft.player != null && !minecraft.player.isSpectator();
     }
 
@@ -32,20 +32,20 @@ public final class TimelineAutoHide {
             return;
         }
 
-        if (minecraft.screen instanceof TimelineScreen) {
+        if (minecraft.gui.screen() instanceof TimelineScreen) {
             pendingRestore = false;
             if (ClientReplayState.cameraFollow() && !minecraft.player.isSpectator()) {
                 pendingRestore = true;
-                minecraft.setScreen(null);
+                minecraft.gui.setScreen(null);
             }
             return;
         }
 
-        if (!pendingRestore || minecraft.screen != null) return;
+        if (!pendingRestore || minecraft.gui.screen() != null) return;
 
         if (!wantsCleanView(minecraft) && ClientReplayState.cameraFollow()) {
             pendingRestore = false;
-            minecraft.setScreen(new TimelineScreen());
+            minecraft.gui.setScreen(new TimelineScreen());
         }
     }
 }

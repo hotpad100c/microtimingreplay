@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.replay;
 
 
+import net.minecraft.world.entity.EntitySpawnRequest;
 import net.minecraft.world.level.storage.ValueInput;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
@@ -214,7 +215,7 @@ public class WorldBackupManager {
                         EntityReplayManager.spawnStandInFromNbt(level, entityNbt);
                     } else {
                         ValueInput input = TagValueInput.create(ProblemReporter.DISCARDING, level.registryAccess(), entityNbt);
-                        EntityType.create(input, level, EntitySpawnReason.LOAD)
+                        EntityType.create(input, level, new EntitySpawnRequest(EntitySpawnReason.LOAD, true))
                                 .ifPresent(level::addFreshEntity);
                     }
                 }

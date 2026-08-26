@@ -70,7 +70,7 @@ public class PostGameEventEvent extends Vec3PosEvent {
         Vec3 pos = getPos();
         Vector3f scale = new Vector3f(0.3f, 0.3f, 0.3f);
         Vec3 boxOrigin = pos.subtract(scale.x() / 2.0, scale.y() / 2.0, scale.z() / 2.0);
-        MTRMarker.spawnBlockDisplay(level, boxOrigin, Blocks.BLUE_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.DARK_AQUA);
+        MTRMarker.spawnBlockDisplay(level, boxOrigin, Blocks.STAINED_GLASS.blue().defaultBlockState(), scale, ChatFormatting.DARK_AQUA);
 
         MutableComponent mutableComponent = Component.literal("PostGameEvent").withStyle(ChatFormatting.DARK_AQUA);
         BlockState state = getBlock();

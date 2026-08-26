@@ -37,6 +37,12 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 java {
+	// Minecraft 26.2 requires Java 25. Use a Java 25 compiler even when
+	// Gradle itself was started by an IDE with a different JDK.
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+
 	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
 	// if it is present.
 	// If you remove this line, sources will not be generated.

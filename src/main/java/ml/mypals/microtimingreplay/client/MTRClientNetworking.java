@@ -40,7 +40,7 @@ public class MTRClientNetworking {
                 default -> null;
             };
             if (screen != null) {
-                context.client().setScreen(screen);
+                context.client().gui.setScreen(screen);
             }
         });
     }

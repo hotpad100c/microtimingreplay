@@ -80,7 +80,7 @@ public class SelectionEventHandler {
 
         UseBlockCallback.EVENT.register((player, world, hand, hitResult) -> {
             if (world.isClientSide()) return InteractionResult.PASS;
-            if (player.getItemInHand(hand).getItem() != Items.PURPLE_DYE) return InteractionResult.PASS;
+            if (player.getItemInHand(hand).getItem() != Items.DYE.purple()) return InteractionResult.PASS;
 
             String infoProfile = MTRCommand.getCurrentInfoProfile();
             if (infoProfile == null) return InteractionResult.PASS;
@@ -127,7 +127,7 @@ public class SelectionEventHandler {
 
         AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
             if (world.isClientSide()) return InteractionResult.PASS;
-            if (player.getMainHandItem().getItem() != Items.PURPLE_DYE) return InteractionResult.PASS;
+            if (player.getMainHandItem().getItem() != Items.DYE.purple()) return InteractionResult.PASS;
 
             String infoProfile = MTRCommand.getCurrentInfoProfile();
             if (infoProfile == null) return InteractionResult.PASS;

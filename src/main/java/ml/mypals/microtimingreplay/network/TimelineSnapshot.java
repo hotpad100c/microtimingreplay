@@ -1,6 +1,7 @@
 package ml.mypals.microtimingreplay.network;
 
 import ml.mypals.microtimingreplay.replay.ReplaySession;
+import ml.mypals.microtimingreplay.util.DisplayUtils;
 import net.minecraft.ChatFormatting;
 
 import java.util.ArrayDeque;
@@ -79,7 +80,7 @@ public class TimelineSnapshot {
     private static int colorOf(ReplaySession.ReplayAction action) {
         ChatFormatting format = action.event().getColor();
         if (format == null) return DEFAULT_COLOR;
-        Integer rgb = format.getColor();
+        Integer rgb = DisplayUtils.getRGBColor(format);
         return rgb == null ? DEFAULT_COLOR : rgb;
     }
 }

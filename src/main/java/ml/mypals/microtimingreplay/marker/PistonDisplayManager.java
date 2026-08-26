@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.util.Brightness;
 import com.mojang.math.Transformation;
@@ -119,7 +120,7 @@ public class PistonDisplayManager {
     }
 
     public static UUID spawnStaticBlockDisplay(ServerLevel level, BlockPos blockPos, BlockState state, float xOff, float yOff, float zOff) {
-        Display.BlockDisplay entity = new Display.BlockDisplay(EntityType.BLOCK_DISPLAY, level);
+        Display.BlockDisplay entity = new Display.BlockDisplay(EntityTypes.BLOCK_DISPLAY, level);
         entity.setPos(blockPos.getX(), blockPos.getY(), blockPos.getZ());
         entity.setBlockState(state);
         entity.setBrightnessOverride(new Brightness(15, 15));

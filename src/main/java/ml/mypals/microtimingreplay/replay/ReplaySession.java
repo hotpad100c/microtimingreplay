@@ -572,7 +572,7 @@ public class ReplaySession {
     /** A leaving scope is always grey, whatever colour the event itself carries. */
     private static void renderExitMarker(ServerLevel level, BlockPos pos, Vector3f scale) {
         MTRMarker.spawnBlockDisplay(level, Vec3.atLowerCornerOf(pos),
-                Blocks.GRAY_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.GRAY);
+                Blocks.STAINED_GLASS.gray().defaultBlockState(), scale, ChatFormatting.GRAY);
     }
 
     private void renderLeafMarker(ServerLevel level, MTREvent event) {

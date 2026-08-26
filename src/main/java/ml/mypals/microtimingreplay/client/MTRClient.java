@@ -53,7 +53,7 @@ public class MTRClient implements ClientModInitializer {
             heldSince = 0;
             return;
         }
-        if (minecraft.screen != null || minecraft.player == null) return;
+        if (minecraft.gui.screen() != null || minecraft.player == null) return;
         if (!ClientReplayState.serverHasMod()) return;
 
         long now = System.currentTimeMillis();
@@ -63,6 +63,6 @@ public class MTRClient implements ClientModInitializer {
         }
         if (now - heldSince < MTRClientConfig.panelHoldMillis()) return;
 
-        minecraft.setScreen(new MTRPanelScreen());
+        minecraft.gui.setScreen(new MTRPanelScreen());
     }
 }

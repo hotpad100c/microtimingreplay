@@ -7,19 +7,21 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Brightness;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Display.BlockDisplay;
 import net.minecraft.world.entity.Display.TextDisplay;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,17 +55,17 @@ public class DisplayUtils {
     }
 
     public static BlockState getGlassState(ChatFormatting color) {
-        if (color == null) return Blocks.WHITE_STAINED_GLASS.defaultBlockState();
+        if (color == null) return Blocks.STAINED_GLASS.white().defaultBlockState();
         return switch (color) {
-            case RED -> Blocks.RED_STAINED_GLASS.defaultBlockState();
-            case GREEN -> Blocks.GREEN_STAINED_GLASS.defaultBlockState();
-            case YELLOW -> Blocks.YELLOW_STAINED_GLASS.defaultBlockState();
-            case AQUA, DARK_AQUA -> Blocks.LIGHT_BLUE_STAINED_GLASS.defaultBlockState();
-            case BLUE, DARK_BLUE -> Blocks.BLUE_STAINED_GLASS.defaultBlockState();
-            case LIGHT_PURPLE, DARK_PURPLE -> Blocks.PURPLE_STAINED_GLASS.defaultBlockState();
-            case GRAY, DARK_GRAY -> Blocks.GRAY_STAINED_GLASS.defaultBlockState();
-            case BLACK -> Blocks.BLACK_STAINED_GLASS.defaultBlockState();
-            default -> Blocks.WHITE_STAINED_GLASS.defaultBlockState();
+            case RED -> Blocks.STAINED_GLASS.red().defaultBlockState();
+            case GREEN -> Blocks.STAINED_GLASS.green().defaultBlockState();
+            case YELLOW -> Blocks.STAINED_GLASS.yellow().defaultBlockState();
+            case AQUA, DARK_AQUA -> Blocks.STAINED_GLASS.lightBlue().defaultBlockState();
+            case BLUE, DARK_BLUE -> Blocks.STAINED_GLASS.blue().defaultBlockState();
+            case LIGHT_PURPLE, DARK_PURPLE -> Blocks.STAINED_GLASS.purple().defaultBlockState();
+            case GRAY, DARK_GRAY -> Blocks.STAINED_GLASS.gray().defaultBlockState();
+            case BLACK -> Blocks.STAINED_GLASS.black().defaultBlockState();
+            default -> Blocks.STAINED_GLASS.white().defaultBlockState();
         };
     }
 
@@ -80,7 +82,7 @@ public class DisplayUtils {
     }
 
     public static BlockDisplay spawnOrientedBlockDisplay(ServerLevel level, Vec3 pos, BlockState blockState, Vector3f scale, Quaternionf rotation, ChatFormatting teamColor) {
-        BlockDisplay entity = new BlockDisplay(EntityType.BLOCK_DISPLAY, level);
+        BlockDisplay entity = new BlockDisplay(EntityTypes.BLOCK_DISPLAY, level);
         float offsetX = -(scale.x() - 1.0f) / 2.0f;
         float offsetY = -(scale.y() - 1.0f) / 2.0f;
         float offsetZ = -(scale.z() - 1.0f) / 2.0f;
@@ -98,9 +100,10 @@ public class DisplayUtils {
         entity.setHeight(100.0f);
         tagMarker(entity);
 
-        if (teamColor != null && teamColor.getColor() != null) {
+        Integer color = getRGBColor(teamColor);
+        if (teamColor != null && color != null) {
             entity.setGlowingTag(true);
-            entity.setGlowColorOverride(teamColor.getColor());
+            entity.setGlowColorOverride(color);
         }
 
         level.addFreshEntity(entity);
@@ -124,7 +127,7 @@ public class DisplayUtils {
         float actualLen = (float) Math.max(0.05, length);
         Vector3f scale = new Vector3f(thickness, thickness, actualLen);
 
-        BlockDisplay entity = new BlockDisplay(EntityType.BLOCK_DISPLAY, level);
+        BlockDisplay entity = new BlockDisplay(EntityTypes.BLOCK_DISPLAY, level);
         entity.setPos(start);
         entity.setBlockState(blockState);
         entity.setBrightnessOverride(new Brightness(15, 15));
@@ -139,9 +142,10 @@ public class DisplayUtils {
         entity.setHeight(100.0f);
         tagMarker(entity);
 
-        if (teamColor != null && teamColor.getColor() != null) {
+        Integer color = getRGBColor(teamColor);
+        if (teamColor != null && color != null) {
             entity.setGlowingTag(true);
-            entity.setGlowColorOverride(teamColor.getColor());
+            entity.setGlowColorOverride(color);
         }
 
         level.addFreshEntity(entity);
@@ -149,7 +153,7 @@ public class DisplayUtils {
     }
 
     public static TextDisplay spawnTextDisplay(ServerLevel level, double x, double y, double z, Component text, float scale) {
-        TextDisplay entity = new TextDisplay(EntityType.TEXT_DISPLAY, level);
+        TextDisplay entity = new TextDisplay(EntityTypes.TEXT_DISPLAY, level);
         entity.setPos(x, y, z);
         entity.setBillboardConstraints(Display.BillboardConstraints.CENTER);
         entity.setFlags((byte)(entity.getFlags() | Display.TextDisplay.FLAG_SEE_THROUGH));
@@ -274,5 +278,10 @@ public class DisplayUtils {
 
         result.append(Component.literal("]").withStyle(ChatFormatting.DARK_GRAY));
         return result;
+    }
+    
+    public static @Nullable Integer getRGBColor(ChatFormatting format) {
+        TextColor color = TextColor.fromLegacyFormat(format);
+        return color == null ? null : color.getValue();
     }
 }

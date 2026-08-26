@@ -79,7 +79,7 @@ public class ReceivedGameEventEvent extends Vec3PosEvent {
 
         Vector3f scale = new Vector3f(1.005f, 1.005f, 1.005f);
         Vec3 boxOrigin = pos.subtract(scale.x() / 2.0, scale.y() / 2.0, scale.z() / 2.0);
-        MTRMarker.spawnBlockDisplay(level, boxOrigin, Blocks.PURPLE_STAINED_GLASS.defaultBlockState(), scale, ChatFormatting.DARK_AQUA);
+        MTRMarker.spawnBlockDisplay(level, boxOrigin, Blocks.STAINED_GLASS.purple().defaultBlockState(), scale, ChatFormatting.DARK_AQUA);
         MutableComponent mutableComponent = Component.literal("ReceivedGameEvent").withStyle(ChatFormatting.DARK_AQUA);
         
         String srcId = getSourceUUID();
@@ -91,7 +91,7 @@ public class ReceivedGameEventEvent extends Vec3PosEvent {
 
         Vector3f originScale = new Vector3f(0.5f, 0.5f, 0.5f);
         Vec3 originPos = getOrigin().subtract(0.25, 0.25, 0.25);
-        MTRMarker.spawnBlockDisplay(level, originPos, Blocks.MAGENTA_STAINED_GLASS.defaultBlockState(), originScale, ChatFormatting.LIGHT_PURPLE);
+        MTRMarker.spawnBlockDisplay(level, originPos, Blocks.STAINED_GLASS.magenta().defaultBlockState(), originScale, ChatFormatting.LIGHT_PURPLE);
         MTRMarker.spawnTextDisplay(level, getOrigin().x(), getOrigin().y() + 0.5, getOrigin().z(), Component.literal("Vibration Origin").withStyle(ChatFormatting.LIGHT_PURPLE), 0.5f);
     }
 

@@ -201,7 +201,7 @@ public class TimelineScreen extends Screen {
         addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.timeline.forward", "Forward ▶"),
                 b -> MTRClientNetworking.step(true)).bounds(82, bottom, 70, 18).build());
         addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.timeline.filter", "Filter"),
-                b -> this.minecraft.setScreen(new FilterScreen(this))).bounds(this.width - 154, bottom, 70, 18).build());
+                b -> this.minecraft.gui.setScreen(new FilterScreen(this))).bounds(this.width - 154, bottom, 70, 18).build());
         addRenderableWidget(Button.builder(MTRComponent.translatable("mtr.timeline.close", "Close"),
                 b -> onClose()).bounds(this.width - 80, bottom, 70, 18).build());
 
@@ -513,7 +513,7 @@ public class TimelineScreen extends Screen {
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Everything the default does is screen-wide paint we do not want — except this,
         // which is the accessibility sound subtitles and has nothing to do with the background.
-        this.minecraft.gui.extractDeferredSubtitles();
+        this.minecraft.gui.hud.extractDeferredSubtitles();
     }
 
     @Override
@@ -892,9 +892,9 @@ public class TimelineScreen extends Screen {
         }
 
         if (ClientReplayState.cameraFollow() && !searching() && matchesHideGui(event)) {
-            this.minecraft.options.hideGui = true;
+            if (!this.minecraft.gui.hud.isHidden()) this.minecraft.gui.hud.toggle();
             TimelineAutoHide.markHidden();
-            this.minecraft.setScreen(null);
+            this.minecraft.gui.setScreen(null);
             return true;
         }
 
