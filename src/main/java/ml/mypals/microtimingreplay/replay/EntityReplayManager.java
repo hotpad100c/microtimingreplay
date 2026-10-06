@@ -4,20 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.chat.Component;
 
-import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
+import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.ValueInput;
 
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.level.storage.TagValueInput;
-import net.minecraft.world.level.storage.ValueInput;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -147,8 +146,8 @@ public class EntityReplayManager {
 
             List<Entity> levelEntities = new ArrayList<>();
             for (Entity entity : level.getAllEntities()) {
-                if (entity.entityTags().contains(REPLAY_ENTITY_TAG)
-                        || entity.entityTags().contains("mtr_replay_marker")) {
+                if (entity.getTags().contains(REPLAY_ENTITY_TAG)
+                        || entity.getTags().contains("mtr_replay_marker")) {
                     levelEntities.add(entity);
                 }
             }
@@ -171,7 +170,7 @@ public class EntityReplayManager {
         Entity entity = load(level, copy);
         if (entity == null) return null;
 
-        entity.absSnapTo(x, y, z, yaw, pitch);
+        entity.snapTo(x, y, z, yaw, pitch);
         finishStandIn(level, uuid, entity);
         return entity;
     }

@@ -20,6 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(NeighborUpdater.class)
 public interface NeighborUpdaterMixin {
 
+    // 1.21.2+ replaced executeUpdate's neighbor BlockPos with an Orientation.
     @Inject(method = "executeUpdate", at = @At("HEAD"))
     private static void mtr$onExecuteUpdateHead(Level level, BlockState state, BlockPos pos, Block changedBlock, Orientation orientation, boolean movedByPiston, CallbackInfo ci) {
         if (MTRState.isRecording(level)) {
@@ -44,6 +45,7 @@ public interface NeighborUpdaterMixin {
         }
     }
 
+    // 1.21.2+ reordered executeShapeUpdate: the two BlockPos come before the BlockState.
     @Inject(method = "executeShapeUpdate", at = @At("HEAD"))
     private static void mtr$onExecuteShapeUpdateHead(LevelAccessor level, Direction direction, BlockPos pos, BlockPos neighborPos, BlockState neighborState, int updateFlags, int updateLimit, CallbackInfo ci) {
         if (level instanceof Level realLevel && MTRState.isRecording(realLevel)) {

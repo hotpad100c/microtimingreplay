@@ -5,7 +5,7 @@ import ml.mypals.microtimingreplay.client.MTRClientConfig;
 import ml.mypals.microtimingreplay.client.MTRClientNetworking;
 import ml.mypals.microtimingreplay.client.MTRKeys;
 import ml.mypals.microtimingreplay.util.MTRComponent;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -140,10 +140,10 @@ public class ClientConfigScreen extends Screen {
     // ── drawing ──────────────────────────────────────────────────────────────
 
     @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
 
-        graphics.text(this.font, this.title, LABEL_X, 14, MTRWidgets.TEXT);
+        graphics.drawString(this.font, this.title, LABEL_X, 14, MTRWidgets.TEXT);
 
         label(graphics, unitButton, MTRComponent.translatable("mtr.config.unit", "Scroll steps by"));
         label(graphics, amountButton, MTRComponent.translatable("mtr.config.amount", "Units per notch"));
@@ -152,19 +152,19 @@ public class ClientConfigScreen extends Screen {
         label(graphics, holdButton, MTRComponent.translatable("mtr.config.hold", "Hold before panel opens"));
         label(graphics, watchButton, MTRComponent.translatable("mtr.config.subscription", "Subscription"));
 
-        graphics.text(this.font, MTRComponent.translatable("mtr.config.keybind",
+        graphics.drawString(this.font, MTRComponent.translatable("mtr.config.keybind",
                         "Hold %s for the hotbar panel — rebind it in Controls",
                         MTRKeys.panel.getTranslatedKeyMessage().getString()),
                 LABEL_X, this.height - 52, MTRWidgets.TEXT_DIM);
 
         if (!ClientReplayState.serverHasMod()) {
-            graphics.text(this.font, MTRComponent.translatable("mtr.config.vanilla_server",
+            graphics.drawString(this.font, MTRComponent.translatable("mtr.config.vanilla_server",
                             "This server does not run MicroTimingReplay — commands still work"),
                     LABEL_X, this.height - 40, MTRWidgets.TEXT_OFF);
         }
     }
 
-    private void label(GuiGraphicsExtractor graphics, Button button, Component text) {
-        graphics.text(this.font, text, LABEL_X, button.getY() + 6, MTRWidgets.TEXT);
+    private void label(GuiGraphics graphics, Button button, Component text) {
+        graphics.drawString(this.font, text, LABEL_X, button.getY() + 6, MTRWidgets.TEXT);
     }
 }

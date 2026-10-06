@@ -16,6 +16,10 @@ import java.util.Set;
 @Mixin(ClientPacketListener.class)
 public abstract class ClientPacketListenerMixin {
 
+    /**
+     * A stand-in only ever moves because the replay said so, so smoothing that move over
+     * three ticks would show a position the recording never had. Snap instead of lerp.
+     */
     @WrapOperation(method = "handleEntityPositionSync", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/Entity;moveOrInterpolateTo(Lnet/minecraft/world/phys/Vec3;FF)V"))
     private void mtr$snapReplayEntity(Entity entity, Vec3 position, float yRot, float xRot, Operation<Void> original) {
         if (EntityReplayManager.isReplayEntity(entity)) {

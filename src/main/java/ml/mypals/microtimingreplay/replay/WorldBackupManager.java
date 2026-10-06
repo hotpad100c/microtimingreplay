@@ -92,7 +92,7 @@ public class WorldBackupManager {
             ListTag entitiesTag = new ListTag();
             for (Entity entity : level.getAllEntities()) {
                 if (entity instanceof Player && !includePlayerStandIns) continue;
-                if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
+                if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
 
                 double ex = entity.getX();
                 double ey = entity.getY();
@@ -165,7 +165,7 @@ public class WorldBackupManager {
                     List<Entity> toRemove = new ArrayList<>();
                     for (Entity entity : level.getAllEntities()) {
                         if (entity instanceof Player) continue;
-                        if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
+                        if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) continue;
 
                         double ex = entity.getX();
                         double ey = entity.getY();

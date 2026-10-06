@@ -1,5 +1,7 @@
 package ml.mypals.microtimingreplay.replay.stackTrace;
 
+import ml.mypals.microtimingreplay.util.MTRNbt;
+
 import ml.mypals.microtimingreplay.MicroTimingReplay;
 import ml.mypals.microtimingreplay.event.MTREvent;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
@@ -7,6 +9,7 @@ import ml.mypals.microtimingreplay.replay.ReplayContext;
 import ml.mypals.microtimingreplay.profile.TickFrame;
 import ml.mypals.microtimingreplay.profile.WorldScopedStorage;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.NbtAccounter;
@@ -78,7 +81,7 @@ public class StackTraceManager {
         ListTag stepsList = root.getList("steps").orElse(new ListTag());
         for (int i = 0; i < stepsList.size(); i++) {
             CompoundTag stepTag = stepsList.getCompound(i).orElse(new CompoundTag());
-            int step = stepTag.getInt("step").orElse(-1);
+            int step = MTRNbt.getInt(stepTag, "step", -1);
             if (step >= 0 && stepTag.contains("lines")) {
                 ListTag linesTag = stepTag.getList("lines").orElse(new ListTag());
                 List<String> lines = new ArrayList<>();

@@ -60,7 +60,7 @@ public final class PlayerProxy {
         nbt.putIntArray("UUID", UUIDUtil.uuidToIntArray(replayUuid(player)));
 
         ResolvableProfile.CODEC
-                .encodeStart(NbtOps.INSTANCE, player.getProfile())
+                .encodeStart(NbtOps.INSTANCE, ResolvableProfile.createResolved(player.getGameProfile()))
                 .result()
                 .ifPresent(profile -> nbt.put("profile", profile));
         nbt.putBoolean("immovable", true);

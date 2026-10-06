@@ -42,7 +42,7 @@ public class MicroTimingReplay implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register(MTRCommand::register);
 		ServerLifecycleEvents.SERVER_STARTED.register(s -> {MicroTimingReplay.server = s;WorldScopedStorage.migrateCategoryLayout();});
 		ServerLifecycleEvents.SERVER_STOPPING.register(MTRState::stoppingServer);
-		ServerLifecycleEvents.SERVER_STOPPED.register(_ -> MicroTimingReplay.server = null);
+		ServerLifecycleEvents.SERVER_STOPPED.register(s -> MicroTimingReplay.server = null);
 		ServerTickEvents.END_SERVER_TICK.register(MTRState::checkAutoStop);
 		SelectionEventHandler.register();
 	}

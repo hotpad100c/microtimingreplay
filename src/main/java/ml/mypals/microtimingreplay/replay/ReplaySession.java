@@ -107,7 +107,7 @@ public class ReplaySession {
             }
         }
 
-        bossBar = new ServerBossEvent(UUID.randomUUID(), MTRComponent.translatable("mtr.bossbar.start", "Replay: %s", profile.getName()),
+        bossBar = new ServerBossEvent(MTRComponent.translatable("mtr.bossbar.start", "Replay: %s", profile.getName()),
                 BossEvent.BossBarColor.BLUE, BossEvent.BossBarOverlay.PROGRESS);
         updateBossBar();
     }
@@ -160,12 +160,12 @@ public class ReplaySession {
             for (ServerLevel sl : MicroTimingReplay.server.getAllLevels()) {
                 List<Entity> toDiscard = new ArrayList<>();
                 for (Entity entity : sl.getAllEntities()) {
-                    if (entity.entityTags().contains("mtr_replay_marker") ||
-                        entity.entityTags().contains("mtr_marker") ||
-                        entity.entityTags().contains("mtr_area_marker") ||
-                        entity.entityTags().contains("mtr_dynamic_marker") ||
-                        entity.entityTags().contains("mtr_piston_display") ||
-                        entity.entityTags().contains("mtr_replay_entity")) {
+                    if (entity.getTags().contains("mtr_replay_marker") ||
+                        entity.getTags().contains("mtr_marker") ||
+                        entity.getTags().contains("mtr_area_marker") ||
+                        entity.getTags().contains("mtr_dynamic_marker") ||
+                        entity.getTags().contains("mtr_piston_display") ||
+                        entity.getTags().contains("mtr_replay_entity")) {
                         toDiscard.add(entity);
                     }
                 }

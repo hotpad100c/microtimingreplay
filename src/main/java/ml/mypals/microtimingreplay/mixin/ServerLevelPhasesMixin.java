@@ -1,10 +1,8 @@
 package ml.mypals.microtimingreplay.mixin;
 
 import net.minecraft.server.level.ServerChunkCache;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.dimension.end.EnderDragonFight;
-import net.minecraft.world.level.storage.TagValueOutput;
+import net.minecraft.world.level.dimension.end.EndDragonFight;
 
 import ml.mypals.microtimingreplay.event.EntitySpawnEvent;
 import ml.mypals.microtimingreplay.event.EntityTickEvent;
@@ -129,7 +127,7 @@ public abstract class ServerLevelPhasesMixin {
     }
     @WrapMethod(method = "tickNonPassenger")
     private void mtr$onTickEntity(Entity entity, Operation<Void> original) {
-        if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
+        if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) {
             return;
         }
 
@@ -209,8 +207,8 @@ public abstract class ServerLevelPhasesMixin {
         }
     }
 
-    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/dimension/end/EnderDragonFight;tick()V"))
-    private void mtr$onTickDragonFight(EnderDragonFight instance, Operation<Void> original) {
+    @WrapOperation(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/dimension/end/EndDragonFight;tick()V"))
+    private void mtr$onTickDragonFight(EndDragonFight instance, Operation<Void> original) {
         if (MTRState.isRecording(this.getServer().getLevel(Level.END)) && PhaseType.DRAGON_FIGHT.enabled()) {
             MTRState.pushEvent(new PhaseEvent(
                     this.getServer().getTickCount() - MTRState.getRecordStartTick(),

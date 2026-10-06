@@ -24,7 +24,7 @@ public abstract class LivingEntityRecordingMixin {
     private void mtr$onSetHealth(float newHealth, CallbackInfo ci) {
         LivingEntity entity = (LivingEntity) (Object) this;
         if (entity.level().isClientSide()) return;
-        if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
+        if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
 
         float oldHealth = this.getHealth();
         if (Math.abs(oldHealth - newHealth) < 1e-4f) return;

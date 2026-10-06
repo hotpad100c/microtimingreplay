@@ -11,8 +11,6 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import ml.mypals.microtimingreplay.MTRState;
 import ml.mypals.microtimingreplay.config.RecordMode;
 import ml.mypals.microtimingreplay.config.RecordingFilterConfig;
-import ml.mypals.microtimingreplay.replay.dialog.EventFilterScreenGenerator;
-import ml.mypals.microtimingreplay.replay.dialog.StackTraceScreenGenerator;
 import ml.mypals.microtimingreplay.marker.MTRMarker;
 import ml.mypals.microtimingreplay.network.MTRNetworking;
 import ml.mypals.microtimingreplay.profile.MTRProfile;
@@ -21,8 +19,9 @@ import ml.mypals.microtimingreplay.replay.ReplayContext;
 import ml.mypals.microtimingreplay.replay.ReplayManager;
 import ml.mypals.microtimingreplay.replay.ReplaySession;
 import ml.mypals.microtimingreplay.replay.WorldBackupManager;
-import ml.mypals.microtimingreplay.replay.dialog.TimelineScreenGenerator;
+import ml.mypals.microtimingreplay.replay.stackTrace.StackTraceManager;
 import ml.mypals.microtimingreplay.util.MTRComponent;
+import ml.mypals.microtimingreplay.util.StackTraceFormatter;
 import ml.mypals.microtimingreplay.util.MTRHelpText;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -34,8 +33,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import java.util.List;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 
@@ -304,7 +303,7 @@ public class MTRCommand {
             ServerLevel level = context.getSource().getLevel();
             for (Entity entity : level.getAllEntities()) {
                 if (entity instanceof Display) {
-                    if (entity.entityTags().contains("mtr_area_marker")) {
+                    if (entity.getTags().contains("mtr_area_marker")) {
                         entity.discard();
                     }
                 }
@@ -334,7 +333,7 @@ public class MTRCommand {
     public static void refreshAreaMarkers(ServerLevel level, MTRProfile profile) {
         for (Entity entity : level.getAllEntities()) {
             if (entity instanceof Display) {
-                if (entity.entityTags().contains("mtr_area_marker")) {
+                if (entity.getTags().contains("mtr_area_marker")) {
                     entity.discard();
                 }
             }
@@ -632,9 +631,12 @@ public class MTRCommand {
             context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.player_only", "This command can only be executed by a player."));
             return 0;
         }
-        // Players running the client add-on get the real screen; everyone else the dialog.
+        // Only players running the client add-on get a screen: 1.21.1 has no dialog API to
+        // fall back on, so vanilla clients are told what they are missing instead.
         if (!MTRNetworking.openTimelineScreen(player)) {
-            TimelineScreenGenerator.openTimeline(player, session, page);
+            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.client_required",
+                    "This screen needs the MicroTimingReplay client mod."));
+            return 0;
         }
         return 1;
     }
@@ -643,7 +645,9 @@ public class MTRCommand {
         if (!context.getSource().isPlayer()) return 0;
         ServerPlayer player = context.getSource().getPlayer();
         if (player != null && !MTRNetworking.openFilterScreen(player)) {
-            EventFilterScreenGenerator.openFilterScreen(player, page);
+            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.client_required",
+                    "This screen needs the MicroTimingReplay client mod."));
+            return 0;
         }
         return 1;
     }
@@ -743,9 +747,43 @@ public class MTRCommand {
         if (session == null) return 0;
         ServerPlayer player = context.getSource().getPlayer();
 
+        if (player == null) {
+            context.getSource().sendFailure(MTRComponent.translatable("commands.mtr.player_only", "This command can only be executed by a player."));
+            return 0;
+        }
+
         // Step numbering restarts per recording, so the traces have to be read from the
         // session the caller is watching rather than whatever was loaded last.
-        ReplayContext.with(session.sessionId(), () -> StackTraceScreenGenerator.openStackTrace(player, step));
+        ReplayContext.with(session.sessionId(), () -> printStackTrace(player, step));
         return 1;
+    }
+
+    /**
+     * Prints the trace into chat. 1.21.1 has no dialog API, so this is the only server-side
+     * surface left for players without the client mod.
+     */
+    private static void printStackTrace(ServerPlayer player, int step) {
+        List<String> rawLines = StackTraceManager.get(step);
+        if (rawLines == null || rawLines.isEmpty()) {
+            player.sendSystemMessage(MTRComponent.translatable("mtr.stacktrace.not_found",
+                    "No stack trace found for step #%d", step).withStyle(ChatFormatting.RED));
+            return;
+        }
+
+        player.sendSystemMessage(MTRComponent.translatable("mtr.stacktrace.header",
+                "Step #%d StackTrace:", step).withStyle(ChatFormatting.YELLOW));
+
+        int maxShow = Math.min(rawLines.size(), 20);
+        for (int i = 0; i < maxShow; i++) {
+            player.sendSystemMessage(Component.literal(String.format("#%02d ", i + 1))
+                    .withStyle(ChatFormatting.DARK_GRAY)
+                    .append(StackTraceFormatter.formatStackTraceLine(rawLines.get(i))));
+        }
+
+        if (rawLines.size() > maxShow) {
+            player.sendSystemMessage(MTRComponent.translatable("mtr.stacktrace.tooltip_more",
+                            "... and %d more lines", rawLines.size() - maxShow)
+                    .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+        }
     }
 }

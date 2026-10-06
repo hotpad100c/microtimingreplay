@@ -39,7 +39,7 @@ public class PlayerPositioner {
         if (player == null || isFollowing(player)) return;
 
         ANCHORS.put(player.getUUID(), new Anchor(
-                player.gameMode(),
+                player.gameMode.getGameModeForPlayer(),
                 player.level().dimension(),
                 player.position(),
                 player.getYRot(),
@@ -57,7 +57,7 @@ public class PlayerPositioner {
         ServerLevel level = player.level().getServer().getLevel(anchor.dimension());
         if (level != null) {
             player.teleportTo(level, anchor.position().x, anchor.position().y, anchor.position().z,
-                    Set.of(), anchor.yRot(), anchor.xRot(), false);
+                    Set.<Relative>of(), anchor.yRot(), anchor.xRot(), false);
         }
         player.setGameMode(anchor.gameMode());
     }
@@ -88,7 +88,7 @@ public class PlayerPositioner {
         double feetY = eye.y - player.getEyeHeight();
         float[] rotation = lookAt(eye, target);
 
-        player.teleportTo(level, eye.x, feetY, eye.z, Set.of(), rotation[0], rotation[1], false);
+        player.teleportTo(level, eye.x, feetY, eye.z, Set.<Relative>of(), rotation[0], rotation[1], false);
         return true;
     }
 

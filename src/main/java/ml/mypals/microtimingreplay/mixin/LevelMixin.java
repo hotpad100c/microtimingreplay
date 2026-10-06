@@ -16,7 +16,6 @@ import ml.mypals.microtimingreplay.profile.MTRProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.piston.PistonMovingBlockEntity;
@@ -29,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Level.class)
-public abstract class LevelMixin implements ScheduledTickAccess {
+public abstract class LevelMixin {
 
     @Shadow
     public abstract BlockState getBlockState(BlockPos pos);

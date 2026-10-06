@@ -15,14 +15,12 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockEventData;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -50,7 +48,7 @@ public abstract class ServerLevelQueuesMixin {
     @Inject(method = "addEntity", at = @At("HEAD"))
     private void mtr$onEntityAddedToWorld(Entity entity, CallbackInfoReturnable<Boolean> cir) {
         if (entity.level().isClientSide()) return;
-        if (entity.entityTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
+        if (entity.getTags().contains(EntityReplayManager.REPLAY_ENTITY_TAG)) return;
 
         if (MTRState.isRecording(entity.level())) {
             if (!RecordingFilterConfig.isEnabled("entity_spawn")) return;

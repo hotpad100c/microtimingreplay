@@ -2,7 +2,7 @@ package ml.mypals.microtimingreplay.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import ml.mypals.microtimingreplay.MicroTimingReplay;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.glfw.GLFW;
@@ -17,13 +17,14 @@ import net.fabricmc.api.Environment;
 @Environment(EnvType.CLIENT)
 public class MTRKeys {
 
+    /** 1.21.11 categories are {@link KeyMapping.Category} records keyed by an Identifier. */
     public static final KeyMapping.Category CATEGORY =
             KeyMapping.Category.register(MicroTimingReplay.id("main"));
 
     public static KeyMapping panel;
 
     public static void register() {
-        panel = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+        panel = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.microtimingreplay.panel",
                 InputConstants.Type.KEYSYM,
                 GLFW.GLFW_KEY_LEFT_ALT,
@@ -40,7 +41,7 @@ public class MTRKeys {
     public static boolean isPanelHeld() {
         if (panel == null) return false;
 
-        InputConstants.Key key = KeyMappingHelper.getBoundKeyOf(panel);
+        InputConstants.Key key = KeyBindingHelper.getBoundKeyOf(panel);
         Minecraft minecraft = Minecraft.getInstance();
 
         return switch (key.getType()) {

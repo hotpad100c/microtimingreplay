@@ -30,6 +30,7 @@ public abstract class ServerNetworkPacketMixin {
 
     // 三个 send 重载最终都汇入这个三参版本；单参的 send(Packet) 服务端从来不调，
     // ServerCommonPacketListenerImpl 直接调双参/三参，所以只钩单参会一条都记不到。
+    // 1.21.9+ 把 send 的回调参数从 PacketSendListener 换成了 ChannelFutureListener。
     @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;Lio/netty/channel/ChannelFutureListener;Z)V", at = @At("HEAD"))
     private void mtr$onSendPacket(Packet<?> packet, ChannelFutureListener listener, boolean flush, CallbackInfo ci) {
         mtr$recordPacket(packet);
